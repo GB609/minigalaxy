@@ -2,11 +2,11 @@ import os
 import locale
 import shutil
 
-import minigalaxy.wine_utils
+from minigalaxy.wine_utils import is_wine_installed
 
 from minigalaxy.translation import _
 from minigalaxy.paths import UI_DIR
-from minigalaxy.constants import SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS
+from minigalaxy.constants import SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS, WINE_VARIANTS
 from minigalaxy.download_manager import DownloadManager
 from minigalaxy.ui.gtk import Gtk
 from minigalaxy.config import Config

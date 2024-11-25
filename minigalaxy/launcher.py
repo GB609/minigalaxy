@@ -6,7 +6,7 @@ import json
 import glob
 import threading
 
-import minigalaxy.wine_utils
+from minigalaxy.wine_utils import is_wine_installed, get_wine_path
 
 from minigalaxy.logger import logger
 from minigalaxy.translation import _

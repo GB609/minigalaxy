@@ -295,7 +295,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="tooltip-text" translatable="yes" context="windows_wine_variant_tooltip">Define either wine or umu-run as default runner for windows games. Can still be overridden per game.</property>
+                <property name="tooltip-text" translatable="yes" context="windows_wine_variant_tooltip">Define the wine variant to use as default runner for new windows game installations.</property>
                 <property name="halign">start</property>
                 <property name="valign">center</property>
                 <property name="label" translatable="yes" context="windows_wine_variant" comments="Has to end with &quot;: &quot;">Default wine variant: </property>

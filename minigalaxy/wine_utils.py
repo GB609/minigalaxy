@@ -3,6 +3,7 @@ Some helpers to handle selection, configuration and start of wine commands
 """
 import shutil
 
+from minigalaxy.config import Config
 from minigalaxy.constants import WINE_VARIANTS
 
 GAMEINFO_UMUID = "umu_id"
@@ -14,17 +15,16 @@ def is_wine_installed() -> bool:
             return True
     return False
 
-def get_wine_path(game):
+def get_wine_path(game, config: Config = Config()) -> str:
     custom_wine_path = game.get_info(GAMEINFO_CUSTOM_WINE)
     if custom_wine_path and shutil.which(custom_wine_path):
         return custom_wine_path
+        
+    newDefault = get_default_wine(config)
+    game.set_info(GAMEINFO_CUSTOM_WINE, newDefault)
+    return newDefault
 
-    #TODO: not really working - no initialized Config object accessible
-    #basic idea instead is to write custom_wine on installation for all games
-    #to make sure changing the default will not change and thus break already installed prefixes
-    return get_default_wine({})
-
-def get_default_wine(config: Config) -> str:
+def get_default_wine(config: Config = Config()) -> str:
     runner = shutil.which(config.default_wine_runner)
     if runner:
         return runner
