@@ -1,6 +1,9 @@
 import os
 import locale
 import shutil
+
+import minigalaxy.wine_utils
+
 from minigalaxy.translation import _
 from minigalaxy.paths import UI_DIR
 from minigalaxy.constants import SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS
@@ -160,7 +163,7 @@ class Preferences(Gtk.Dialog):
                 self.parent.reset_library()
             self.config.view = view
 
-     def __save_wine_choice(self) -> None:
+    def __save_wine_choice(self) -> None:
         wine_choice = self.combobox_wine_variant.get_active_iter()
         if wine_choice is not None:
             model = self.combobox_wine_variant.get_model()
@@ -218,8 +221,8 @@ class Preferences(Gtk.Dialog):
         self.parent.library.filter_library()
 
         if self.switch_show_windows_games.get_active() != self.config.show_windows_games:
-            if self.switch_show_windows_games.get_active() and not shutil.which(self.config.default_wine_runner):
-                self.parent.show_error(_("{} wasn't found. Showing Windows games cannot be enabled.").format(self.config.default_wine_runner))
+            if self.switch_show_windows_games.get_active() and not is_wine_installed():
+                self.parent.show_error(_("Wine wasn't found. Showing Windows games cannot be enabled."))
                 self.config.show_windows_games = False
             else:
                 self.config.show_windows_games = self.switch_show_windows_games.get_active()

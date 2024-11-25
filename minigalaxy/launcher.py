@@ -6,17 +6,10 @@ import json
 import glob
 import threading
 
+import minigalaxy.wine_utils
+
 from minigalaxy.logger import logger
 from minigalaxy.translation import _
-
-
-def get_wine_path(game):
-    binary_name = "wine"
-    custom_wine_path = game.get_info("custom_wine")
-    if custom_wine_path and custom_wine_path != shutil.which(binary_name):
-        binary_name = custom_wine_path
-    return binary_name
-
 
 def config_game(game):
     prefix = os.path.join(game.install_dir, "prefix")
@@ -92,7 +85,7 @@ def determine_launcher_type(files):
         launcher_type = "scummvm"
     elif "start.sh" in files:
         launcher_type = "start_script"
-    elif "prefix" in files and shutil.which("wine"):
+    elif "prefix" in files and is_wine_installed():
         launcher_type = "wine"
     elif "game" in files:
         launcher_type = "final_resort"
