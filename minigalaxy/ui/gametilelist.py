@@ -349,10 +349,7 @@ class GameTileList(Gtk.Box):
         err_msg = install_game(
             self.game,
             save_location,
-            self.config.lang,
-            self.config.install_dir,
-            self.config.keep_installers,
-            self.config.create_applications_file
+            self.config
         )
         if not err_msg:
             GLib.idle_add(self.update_to_state, success_state)

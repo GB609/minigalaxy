@@ -5,6 +5,7 @@ import subprocess
 import hashlib
 import textwrap
 
+from minigalaxy.config import Config
 from minigalaxy.game import Game
 from minigalaxy.logger import logger
 from minigalaxy.translation import _
@@ -45,12 +46,13 @@ def check_diskspace(required_size, location):
 def install_game(  # noqa: C901
         game: Game,
         installer: str,
-        language: str,
-        install_dir: str,
-        keep_installers: bool,
-        create_desktop_file: bool,
-        use_innoextract: bool = True,  # not set externally as of yet
+        config: Config
 ):
+    language = config.lang
+    install_dir = config.install_dir
+    keep_installers = config.keep_installers
+    create_desktop_file = config.create_applications_file
+    user_innoextract = True # not set externally as of yet
     error_message = ""
     tmp_dir = ""
     logger.info("Installing {}".format(game.name))
@@ -63,7 +65,7 @@ def install_game(  # noqa: C901
         if not error_message:
             error_message, tmp_dir = make_tmp_dir(game)
         if not error_message:
-            error_message = extract_installer(game, installer, tmp_dir, language, _use_innoextract)
+            error_message = extract_installer(game, installer, tmp_dir, config, _use_innoextract)
         if not error_message:
             error_message = move_and_overwrite(game, tmp_dir, _use_innoextract)
         if not error_message:
@@ -123,12 +125,12 @@ def make_tmp_dir(game):
     return error_message, temp_dir
 
 
-def extract_installer(game: Game, installer: str, temp_dir: str, language: str, use_innoextract: bool):
+def extract_installer(game: Game, installer: str, temp_dir: str, config: Config, use_innoextract: bool):
     # Extract the installer
     if game.platform in ["linux"]:
         err_msg = extract_linux(installer, temp_dir)
     else:
-        err_msg = extract_windows(game, installer, temp_dir, language, use_innoextract)
+        err_msg = extract_windows(game, installer, temp_dir, config, use_innoextract)
     return err_msg
 
 
@@ -144,10 +146,10 @@ def extract_linux(installer, temp_dir):
     return err_msg
 
 
-def extract_windows(game: Game, installer: str, temp_dir: str, language: str, use_innoextract: bool):
-    err_msg = extract_by_innoextract(installer, temp_dir, language, use_innoextract)
+def extract_windows(game: Game, installer: str, temp_dir: str, config: Config, use_innoextract: bool):
+    err_msg = extract_by_innoextract(installer, temp_dir, config.lang, use_innoextract)
     if err_msg:
-        err_msg = extract_by_wine(game, installer, temp_dir)
+        err_msg = extract_by_wine(game, installer, temp_dir, config)
     return err_msg
 
 
@@ -179,7 +181,7 @@ def extract_by_innoextract(installer: str, temp_dir: str, language: str, use_inn
     return err_msg
 
 
-def extract_by_wine(game, installer, temp_dir):
+def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
     err_msg = ""
     # Set the prefix for Windows games
     prefix_dir = os.path.join(game.install_dir, "prefix")

@@ -2,8 +2,9 @@ import os
 import shutil
 import subprocess
 
-import minigalaxy.wine_utils
+from minigalaxy.wine_utils import GAMEINFO_CUSTOM_WINE, is_wine_installed, get_default_wine
 
+from minigalaxy.config import Config
 from minigalaxy.paths import UI_DIR
 from minigalaxy.translation import _
 from minigalaxy.launcher import config_game, regedit_game, winetricks_game
@@ -50,7 +51,7 @@ class Properties(Gtk.Dialog):
         # Retrieve custom wine path each time Properties is open
         if self.game.get_info(GAMEINFO_CUSTOM_WINE):
             self.button_properties_wine.set_filename(self.game.get_info(GAMEINFO_CUSTOM_WINE))
-        elif is_wine_installed:
+        elif is_wine_installed():
             self.button_properties_wine.set_filename(get_default_wine(self.config))
 
         # Keep switch FPS disabled/enabled
