@@ -16,6 +16,7 @@ class Preferences(Gtk.Dialog):
     combobox_program_language = Gtk.Template.Child()
     combobox_language = Gtk.Template.Child()
     combobox_view = Gtk.Template.Child()
+    combobox_wine_variant = Gtk.Template.Child()
     button_file_chooser = Gtk.Template.Child()
     label_keep_installers = Gtk.Template.Child()
     switch_keep_installers = Gtk.Template.Child()
@@ -36,6 +37,7 @@ class Preferences(Gtk.Dialog):
         self.__set_locale_list()
         self.__set_language_list()
         self.__set_view_list()
+        self.__set_wine_list()
         self.button_file_chooser.set_filename(self.config.install_dir)
         self.switch_keep_installers.set_active(self.config.keep_installers)
         self.switch_stay_logged_in.set_active(self.config.stay_logged_in)
@@ -107,6 +109,24 @@ class Preferences(Gtk.Dialog):
                 self.combobox_view.set_active(key)
                 break
 
+    def __set_wine_list(self) -> None:
+        runners = Gtk.ListStore(str, str)
+        for runner in WINE_VARIANTS:
+            runners.append(runner)
+
+        self.combobox_wine_variant.set_model(runners)
+        self.combobox_wine_variant.set_entry_text_column(1)
+        self.renderer_text = Gtk.CellRendererText()
+        self.combobox_wine_variant.pack_start(self.renderer_text, False)
+        self.combobox_wine_variant.add_attribute(self.renderer_text, "text", 1)
+
+        # Set the active option
+        current_runner = self.config.default_wine_runner
+        for key in range(len(runners)):
+            if runners[key][:1][0] == current_runner:
+                self.combobox_wine_variant.set_active(key)
+                break
+
     def __save_locale_choice(self) -> None:
         new_locale = self.combobox_program_language.get_active_iter()
         if new_locale is not None:
@@ -139,6 +159,13 @@ class Preferences(Gtk.Dialog):
             if view != self.config.view:
                 self.parent.reset_library()
             self.config.view = view
+
+     def __save_wine_choice(self) -> None:
+        wine_choice = self.combobox_wine_variant.get_active_iter()
+        if wine_choice is not None:
+            model = self.combobox_wine_variant.get_model()
+            runner, _ = model[wine_choice][:2]            
+            self.config.default_wine_runner = runner
 
     def __save_theme_choice(self) -> None:
         settings = Gtk.Settings.get_default()
@@ -182,6 +209,7 @@ class Preferences(Gtk.Dialog):
         self.__save_locale_choice()
         self.__save_language_choice()
         self.__save_view_choice()
+        self.__save_wine_choice()
         self.__save_theme_choice()
         self.config.keep_installers = self.switch_keep_installers.get_active()
         self.config.stay_logged_in = self.switch_stay_logged_in.get_active()
@@ -190,8 +218,8 @@ class Preferences(Gtk.Dialog):
         self.parent.library.filter_library()
 
         if self.switch_show_windows_games.get_active() != self.config.show_windows_games:
-            if self.switch_show_windows_games.get_active() and not shutil.which("wine"):
-                self.parent.show_error(_("Wine wasn't found. Showing Windows games cannot be enabled."))
+            if self.switch_show_windows_games.get_active() and not shutil.which(self.config.default_wine_runner):
+                self.parent.show_error(_("{} wasn't found. Showing Windows games cannot be enabled.").format(self.config.default_wine_runner))
                 self.config.show_windows_games = False
             else:
                 self.config.show_windows_games = self.switch_show_windows_games.get_active()
