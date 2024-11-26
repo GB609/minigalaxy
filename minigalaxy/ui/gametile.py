@@ -301,6 +301,8 @@ class GameTile(Gtk.Box):
                 out_of_amount=number_of_files,
                 game=self.game
             )
+            #TODO: understand/research: why is the new download shifted into the beginning, effectively reversing the listing order?
+            #doesnt make sense to me and only appears to make stuff more complicated
             download_files.insert(0, download)
         self.download_list.extend(download_files)
 
