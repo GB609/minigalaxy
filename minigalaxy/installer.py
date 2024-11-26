@@ -48,11 +48,8 @@ def install_game(  # noqa: C901
         installer: str,
         config: Config
 ):
-    language = config.lang
     install_dir = config.install_dir
-    keep_installers = config.keep_installers
-    create_desktop_file = config.create_applications_file
-    user_innoextract = True # not set externally as of yet
+    use_innoextract = True # not set externally as of yet
     error_message = ""
     tmp_dir = ""
     logger.info("Installing {}".format(game.name))
@@ -70,12 +67,12 @@ def install_game(  # noqa: C901
             error_message = move_and_overwrite(game, tmp_dir, _use_innoextract)
         if not error_message:
             error_message = copy_thumbnail(game)
-        if not error_message and create_desktop_file:
+        if not error_message and config.create_applications_file:
             error_message = create_applications_file(game)
     except Exception:
         logger.error("Error installing game %s", game.name, exc_info=1)
         error_message = _("Unhandled error.")
-    _removal_error = remove_installer(game, installer, install_dir, keep_installers)
+    _removal_error = remove_installer(game, installer, install_dir, config.keep_installers)
     error_message = error_message or _removal_error or postinstaller(game)
     if error_message:
         logger.error(error_message)
@@ -186,10 +183,11 @@ def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
     # Set the prefix for Windows games
     prefix_dir = os.path.join(game.install_dir, "prefix")
     drive = os.path.join(prefix_dir, "dosdevices", "d:")
+    wine_env = ["WINEPREFIX={}".format(prefix_dir)]
     if not os.path.exists(prefix_dir):
         os.makedirs(prefix_dir, mode=0o755)
         # Creating the prefix before modifying dosdevices
-        command = ["env", "WINEPREFIX={}".format(prefix_dir), "wine", "start", "/B", "cmd", "/C", "exit"]
+        command = ["env", *wine_env, "wine", "wineboot", "-u"]
         stdout, stderr, exitcode = _exe_cmd(command)
         if exitcode not in [0]:
             print(stderr, file=sys.stderr)
@@ -199,7 +197,7 @@ def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
     os.symlink(temp_dir, drive)
     _dir = os.path.join(temp_dir, os.path.basename(game.install_dir))  # can't install to drive root
     # It's possible to set install dir as argument before installation
-    command = ["env", "WINEPREFIX={}".format(prefix_dir), "wine", installer, "/dir={}".format(_dir), "/VERYSILENT"]
+    command = ["env", *wine_env, "wine", installer, "/dir={}".format(_dir), "/VERYSILENT"]
     stdout, stderr, exitcode = _exe_cmd(command)
     if exitcode not in [0]:
         err_msg = _("Wine extraction failed.")
