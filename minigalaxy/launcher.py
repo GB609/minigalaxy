@@ -10,6 +10,7 @@ from minigalaxy.logger import logger
 from minigalaxy.translation import _
 from minigalaxy.wine_utils import is_wine_installed, get_wine_path
 
+
 def config_game(game):
     prefix = os.path.join(game.install_dir, "prefix")
 
@@ -160,6 +161,10 @@ def get_scummvm_exe_cmd(game, files):
 
 
 def get_start_script_exe_cmd():
+    """Currently also used for windows games that gog has prepackaged with a prefix
+    and maybe even a custom wine executable.
+    Unless this script is either parsed and selectively executed or the prepackaged
+    wine executable modified, no custom wine option will work here"""
     return ["./start.sh"]
 
 

@@ -11,7 +11,8 @@ from minigalaxy.logger import logger
 from minigalaxy.translation import _
 from minigalaxy.launcher import get_execute_command
 from minigalaxy.paths import CACHE_DIR, THUMBNAIL_DIR, APPLICATIONS_DIR
-from minigalaxy.wine_utils import is_wine_installed
+from minigalaxy.wine_utils import is_wine_installed, get_wine_env
+
 
 def get_available_disk_space(location):
     """Check disk space available to the user. This method uses the absolute path so
@@ -49,7 +50,7 @@ def install_game(  # noqa: C901
         config: Config
 ):
     install_dir = config.install_dir
-    use_innoextract = True # not set externally as of yet
+    use_innoextract = True  # not set externally as of yet
     error_message = ""
     tmp_dir = ""
     logger.info("Installing {}".format(game.name))
@@ -144,11 +145,12 @@ def extract_linux(installer, temp_dir):
 
 
 def extract_windows(game: Game, installer: str, temp_dir: str, config: Config):
-    if config.windows_installer == 'innoextract' and shutils.which("innoextract"):
+    if config.windows_installer == 'innoextract' and shutil.which("innoextract"):
         err_msg = extract_by_innoextract(installer, temp_dir, config)
     elif is_wine_installed():
         err_msg = extract_by_wine(game, installer, temp_dir, config)
     else:
+        # shouldn't normally happen as the UI should not allow windows games to be installed in that case
         err_msg = "{} {}".format(_("Innoextract not installed."), _("Wine not installed."))
 
     return err_msg
@@ -179,12 +181,14 @@ def extract_by_innoextract(installer: str, temp_dir: str,  config: Config):
 
     return err_msg
 
+
 def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
     err_msg = ""
+
     # Set the prefix for Windows games
     prefix_dir = os.path.join(game.install_dir, "prefix")
     drive = os.path.join(prefix_dir, "dosdevices", "d:")
-    wine_env = ["WINEPREFIX={}".format(prefix_dir)]
+    wine_env = get_wine_env(game, config)
     if not os.path.exists(prefix_dir):
         os.makedirs(prefix_dir, mode=0o755)
         # Creating the prefix before modifying dosdevices
@@ -206,6 +210,7 @@ def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
         os.unlink(drive)
         os.symlink("../../..", drive)
     return err_msg
+
 
 def move_and_overwrite(game, temp_dir, use_innoextract):
     # Copy the game files into the correct directory

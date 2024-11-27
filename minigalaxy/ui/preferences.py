@@ -1,15 +1,15 @@
 import os
 import locale
-import shutil
-
-from minigalaxy.wine_utils import is_wine_installed
 
 from minigalaxy.translation import _
 from minigalaxy.paths import UI_DIR
-from minigalaxy.constants import SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS, WINE_VARIANTS
+from minigalaxy.constants import (
+    SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES,
+    VIEWS, WINE_VARIANTS, WINDOWS_INSTALLER)
 from minigalaxy.download_manager import DownloadManager
 from minigalaxy.ui.gtk import Gtk
 from minigalaxy.config import Config
+from minigalaxy.wine_utils import is_wine_installed
 
 
 @Gtk.Template.from_file(os.path.join(UI_DIR, "preferences.ui"))
@@ -72,7 +72,7 @@ class Preferences(Gtk.Dialog):
         renderer_text = Gtk.CellRendererText()
         combobox.pack_start(renderer_text, False)
         combobox.add_attribute(renderer_text, "text", 1)
-        
+
         # Set the active option
         for key in range(len(datalist)):
             if datalist[key][:1][0] == active_option:
@@ -83,43 +83,27 @@ class Preferences(Gtk.Dialog):
         """puts current value (first array element in model for selection) into config[prop_name]
         returns true if the value has changed"""
         active_choice = combobox.get_active_iter()
-        current_config = self.config[prop_name]
+        current_config = getattr(self.config, prop_name)
         value = current_config
         if active_choice is not None:
             model = combobox.get_model()
             value, _ = model[active_choice][:2]
-            self.config[prop_name] = value
+            setattr(self.config, prop_name, value)
         return value != current_config
 
     def __save_locale_choice(self) -> None:
         current_locale = self.config.locale
-        if __save_combo_value(self.combobox_program_language, 'locale'):
+        if self.__save_combo_value(self.combobox_program_language, 'locale'):
             new_locale = self.config.locale
             if new_locale == '':
                 new_locale = locale.getdefaultlocale()[0]
-            
+
             try:
                 locale.setlocale(locale.LC_ALL, (new_locale, 'UTF-8'))
             except locale.Error:
                 self.config.locale = current_locale
                 self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
-                                            "your system."))
-
-        new_locale = self.combobox_program_language.get_active_iter()
-        if new_locale is not None:
-            model = self.combobox_program_language.get_model()
-            locale_choice = model[new_locale][-2]
-            if locale_choice == '':
-                default_locale = locale.getdefaultlocale()[0]
-                locale.setlocale(locale.LC_ALL, (default_locale, 'UTF-8'))
-                self.config.locale = locale_choice
-            else:
-                try:
-                    locale.setlocale(locale.LC_ALL, (locale_choice, 'UTF-8'))
-                    self.config.locale = locale_choice
-                except locale.Error:
-                    self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
-                                             "your system."))
+                                         "your system."))
 
     def __save_theme_choice(self) -> None:
         settings = Gtk.Settings.get_default()
@@ -183,13 +167,13 @@ class Preferences(Gtk.Dialog):
                 self.config.show_windows_games = False
             else:
                 self.config.show_windows_games = self.switch_show_windows_games.get_active()
-                library_reset_needed=True
+                library_reset_needed = True
 
         # Only change the install_dir if it was actually changed
         if self.button_file_chooser.get_filename() != self.config.install_dir:
             if self.__save_install_dir_choice():
                 self.download_manager.cancel_all_downloads()
-                library_reset_needed=True
+                library_reset_needed = True
             else:
                 self.parent.show_error(_("{} isn't a usable path").format(self.button_file_chooser.get_filename()))
 
