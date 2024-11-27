@@ -264,6 +264,10 @@ msgstr "Falha na extração de Innoextract."
 msgid "Innoextract not installed."
 msgstr "Innoextract não se encontra instalado."
 
+#: minigalaxy/installer.py:178
+msgid "Wine not installed."
+msgstr "Wine não se encontra instalado."
+
 #: minigalaxy/ui/gametile.py:534
 msgid "Install"
 msgstr "Instalar"

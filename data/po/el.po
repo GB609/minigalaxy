@@ -283,6 +283,10 @@ msgstr "Αποτυχία αποσυμπίεσης Innoextract."
 msgid "Innoextract not installed."
 msgstr "Δεν εγκαταστάθηκε το Innoextract."
 
+#: minigalaxy/installer.py:178
+msgid "Wine not installed."
+msgstr "Δεν εγκαταστάθηκε το Wine."
+
 #: minigalaxy/ui/gametile.py:523
 msgid "Install"
 msgstr "Εγκατάστασή"

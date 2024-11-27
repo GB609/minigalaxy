@@ -6,10 +6,9 @@ import json
 import glob
 import threading
 
-from minigalaxy.wine_utils import is_wine_installed, get_wine_path
-
 from minigalaxy.logger import logger
 from minigalaxy.translation import _
+from minigalaxy.wine_utils import is_wine_installed, get_wine_path
 
 def config_game(game):
     prefix = os.path.join(game.install_dir, "prefix")

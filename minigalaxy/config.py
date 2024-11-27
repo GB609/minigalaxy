@@ -143,6 +143,15 @@ class Config:
         self.__write()
 
     @property
+    def windows_installer(self) -> str:
+        return self.__config.get("windows_installer", "innoextract")
+
+    @windows_installer.setter
+    def windows_installer(self, new_value: str) -> None:
+        self.__config["windows_installer"] = new_value
+        self.__write()
+
+    @property
     def keep_window_maximized(self) -> bool:
         return self.__config.get("keep_window_maximized", False)
 

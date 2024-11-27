@@ -11,7 +11,7 @@ from minigalaxy.logger import logger
 from minigalaxy.translation import _
 from minigalaxy.launcher import get_execute_command
 from minigalaxy.paths import CACHE_DIR, THUMBNAIL_DIR, APPLICATIONS_DIR
-
+from minigalaxy.wine_utils import is_wine_installed
 
 def get_available_disk_space(location):
     """Check disk space available to the user. This method uses the absolute path so
@@ -143,40 +143,41 @@ def extract_linux(installer, temp_dir):
     return err_msg
 
 
-def extract_windows(game: Game, installer: str, temp_dir: str, config: Config, use_innoextract: bool):
-    err_msg = extract_by_innoextract(installer, temp_dir, config.lang, use_innoextract)
-    if err_msg:
+def extract_windows(game: Game, installer: str, temp_dir: str, config: Config):
+    if config.windows_installer == 'innoextract' and shutils.which("innoextract"):
+        err_msg = extract_by_innoextract(installer, temp_dir, config)
+    elif is_wine_installed():
         err_msg = extract_by_wine(game, installer, temp_dir, config)
-    return err_msg
-
-
-def extract_by_innoextract(installer: str, temp_dir: str, language: str, use_innoextract: bool):
-    err_msg = ""
-    if use_innoextract:
-        lang = lang_install(installer, language)
-        cmd = ["innoextract", installer, "-d", temp_dir, "--gog", lang]
-        stdout, stderr, exitcode = _exe_cmd(cmd)
-        if exitcode not in [0]:
-            err_msg = _("Innoextract extraction failed.")
-        else:
-            # In the case the game is installed in "temp_dir/app" like Zeus + Poseidon (Acropolis)
-            inno_app_dir = os.path.join(temp_dir, "app")
-            if os.path.isdir(inno_app_dir):
-                _mv(inno_app_dir, temp_dir)
-            # In the case the game is installed in "temp_dir/game" like Dragon Age™: Origins - Ultimate Edition
-            inno_game_dir = os.path.join(temp_dir, "game")
-            if os.path.isdir(inno_game_dir):
-                _mv(inno_game_dir, temp_dir)
-            innoextract_unneeded_dirs = ["__redist", "tmp", "commonappdata", "app", "DirectXpackage", "dotNet35"]
-            innoextract_unneeded_dirs += ["MSVC2005", "MSVC2005_x64", "support", "__unpacker", "userdocs", "game"]
-            for unneeded_dir in innoextract_unneeded_dirs:
-                unneeded_dir_full_path = os.path.join(temp_dir, unneeded_dir)
-                if os.path.isdir(unneeded_dir_full_path):
-                    shutil.rmtree(unneeded_dir_full_path)
     else:
-        err_msg = _("Innoextract not installed.")
+        err_msg = "{} {}".format(_("Innoextract not installed."), _("Wine not installed."))
+
     return err_msg
 
+
+def extract_by_innoextract(installer: str, temp_dir: str,  config: Config):
+    err_msg = ""
+
+    cmd = ["innoextract", installer, "-d", temp_dir, "--gog", lang_install(installer, config.lang)]
+    stdout, stderr, exitcode = _exe_cmd(cmd)
+    if exitcode not in [0]:
+        err_msg = _("Innoextract extraction failed.")
+    else:
+        # In the case the game is installed in "temp_dir/app" like Zeus + Poseidon (Acropolis)
+        inno_app_dir = os.path.join(temp_dir, "app")
+        if os.path.isdir(inno_app_dir):
+            _mv(inno_app_dir, temp_dir)
+        # In the case the game is installed in "temp_dir/game" like Dragon Age™: Origins - Ultimate Edition
+        inno_game_dir = os.path.join(temp_dir, "game")
+        if os.path.isdir(inno_game_dir):
+            _mv(inno_game_dir, temp_dir)
+        innoextract_unneeded_dirs = ["__redist", "tmp", "commonappdata", "app", "DirectXpackage", "dotNet35"]
+        innoextract_unneeded_dirs += ["MSVC2005", "MSVC2005_x64", "support", "__unpacker", "userdocs", "game"]
+        for unneeded_dir in innoextract_unneeded_dirs:
+            unneeded_dir_full_path = os.path.join(temp_dir, unneeded_dir)
+            if os.path.isdir(unneeded_dir_full_path):
+                shutil.rmtree(unneeded_dir_full_path)
+
+    return err_msg
 
 def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
     err_msg = ""
@@ -205,7 +206,6 @@ def extract_by_wine(game: Game, installer: str, temp_dir: str, config: Config):
         os.unlink(drive)
         os.symlink("../../..", drive)
     return err_msg
-
 
 def move_and_overwrite(game, temp_dir, use_innoextract):
     # Copy the game files into the correct directory

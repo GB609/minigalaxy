@@ -20,6 +20,7 @@ class Preferences(Gtk.Dialog):
     combobox_language = Gtk.Template.Child()
     combobox_view = Gtk.Template.Child()
     combobox_wine_variant = Gtk.Template.Child()
+    combobox_windows_installer = Gtk.Template.Child()
     button_file_chooser = Gtk.Template.Child()
     label_keep_installers = Gtk.Template.Child()
     switch_keep_installers = Gtk.Template.Child()
@@ -37,10 +38,12 @@ class Preferences(Gtk.Dialog):
         self.config = config
         self.download_manager = download_manager
 
-        self.__set_locale_list()
-        self.__set_language_list()
-        self.__set_view_list()
-        self.__set_wine_list()
+        self.__init_combobox(self.combobox_program_language, SUPPORTED_LOCALES, self.config.locale)
+        self.__init_combobox(self.combobox_language, SUPPORTED_DOWNLOAD_LANGUAGES, self.config.lang)
+        self.__init_combobox(self.combobox_view, VIEWS, self.config.view)
+        self.__init_combobox(self.combobox_wine_variant, WINE_VARIANTS, self.config.default_wine_runner)
+        self.__init_combobox(self.combobox_windows_installer, WINDOWS_INSTALLER, self.config.windows_installer)
+
         self.button_file_chooser.set_filename(self.config.install_dir)
         self.switch_keep_installers.set_active(self.config.keep_installers)
         self.switch_stay_logged_in.set_active(self.config.stay_logged_in)
@@ -55,82 +58,53 @@ class Preferences(Gtk.Dialog):
             _("Keep installers after downloading a game.\nInstallers are stored in: {}").format(installer_dir)
         )
 
-    def __set_locale_list(self) -> None:
-        locales = Gtk.ListStore(str, str)
-        for local in SUPPORTED_LOCALES:
-            locales.append(local)
+    def __init_combobox(self, combobox, data_feed: [], active_option) -> None:
+        """expects 2-dimensional array with 2 columns for data
+        first entry per row is the config key, second one the string to display in the UI
+        """
+        datalist = Gtk.ListStore(str, str)
+        for entry in data_feed:
+            datalist.append(entry)
 
-        self.combobox_program_language.set_model(locales)
-        self.combobox_program_language.set_entry_text_column(1)
-        self.renderer_text = Gtk.CellRendererText()
-        self.combobox_program_language.pack_start(self.renderer_text, False)
-        self.combobox_program_language.add_attribute(self.renderer_text, "text", 1)
-
+        combobox.set_model(datalist)
+        combobox.set_entry_text_column(1)
+        # renderer can't be shared, no need to put it into a class member
+        renderer_text = Gtk.CellRendererText()
+        combobox.pack_start(renderer_text, False)
+        combobox.add_attribute(renderer_text, "text", 1)
+        
         # Set the active option
-        current_locale = self.config.locale
-        default_locale = locale.getdefaultlocale()
-        if current_locale is None:
-            locale.setlocale(locale.LC_ALL, default_locale)
-        for key in range(len(locales)):
-            if locales[key][:1][0] == current_locale:
-                self.combobox_program_language.set_active(key)
+        for key in range(len(datalist)):
+            if datalist[key][:1][0] == active_option:
+                combobox.set_active(key)
                 break
 
-    def __set_language_list(self) -> None:
-        languages = Gtk.ListStore(str, str)
-        for lang in SUPPORTED_DOWNLOAD_LANGUAGES:
-            languages.append(lang)
-
-        self.combobox_language.set_model(languages)
-        self.combobox_language.set_entry_text_column(1)
-        self.renderer_text = Gtk.CellRendererText()
-        self.combobox_language.pack_start(self.renderer_text, False)
-        self.combobox_language.add_attribute(self.renderer_text, "text", 1)
-
-        # Set the active option
-        current_lang = self.config.lang
-        for key in range(len(languages)):
-            if languages[key][:1][0] == current_lang:
-                self.combobox_language.set_active(key)
-                break
-
-    def __set_view_list(self) -> None:
-        views = Gtk.ListStore(str, str)
-        for view in VIEWS:
-            views.append(view)
-
-        self.combobox_view.set_model(views)
-        self.combobox_view.set_entry_text_column(1)
-        self.renderer_text = Gtk.CellRendererText()
-        self.combobox_view.pack_start(self.renderer_text, False)
-        self.combobox_view.add_attribute(self.renderer_text, "text", 1)
-
-        # Set the active option
-        current_view = self.config.view
-        for key in range(len(views)):
-            if views[key][:1][0] == current_view:
-                self.combobox_view.set_active(key)
-                break
-
-    def __set_wine_list(self) -> None:
-        runners = Gtk.ListStore(str, str)
-        for runner in WINE_VARIANTS:
-            runners.append(runner)
-
-        self.combobox_wine_variant.set_model(runners)
-        self.combobox_wine_variant.set_entry_text_column(1)
-        self.renderer_text = Gtk.CellRendererText()
-        self.combobox_wine_variant.pack_start(self.renderer_text, False)
-        self.combobox_wine_variant.add_attribute(self.renderer_text, "text", 1)
-
-        # Set the active option
-        current_runner = self.config.default_wine_runner
-        for key in range(len(runners)):
-            if runners[key][:1][0] == current_runner:
-                self.combobox_wine_variant.set_active(key)
-                break
+    def __save_combo_value(self, combobox, prop_name) -> bool:
+        """puts current value (first array element in model for selection) into config[prop_name]
+        returns true if the value has changed"""
+        active_choice = combobox.get_active_iter()
+        current_config = self.config[prop_name]
+        value = current_config
+        if active_choice is not None:
+            model = combobox.get_model()
+            value, _ = model[active_choice][:2]
+            self.config[prop_name] = value
+        return value != current_config
 
     def __save_locale_choice(self) -> None:
+        current_locale = self.config.locale
+        if __save_combo_value(self.combobox_program_language, 'locale'):
+            new_locale = self.config.locale
+            if new_locale == '':
+                new_locale = locale.getdefaultlocale()[0]
+            
+            try:
+                locale.setlocale(locale.LC_ALL, (new_locale, 'UTF-8'))
+            except locale.Error:
+                self.config.locale = current_locale
+                self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
+                                            "your system."))
+
         new_locale = self.combobox_program_language.get_active_iter()
         if new_locale is not None:
             model = self.combobox_program_language.get_model()
@@ -146,29 +120,6 @@ class Preferences(Gtk.Dialog):
                 except locale.Error:
                     self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
                                              "your system."))
-
-    def __save_language_choice(self) -> None:
-        lang_choice = self.combobox_language.get_active_iter()
-        if lang_choice is not None:
-            model = self.combobox_language.get_model()
-            lang, _ = model[lang_choice][:2]
-            self.config.lang = lang
-
-    def __save_view_choice(self) -> None:
-        view_choice = self.combobox_view.get_active_iter()
-        if view_choice is not None:
-            model = self.combobox_view.get_model()
-            view, _ = model[view_choice][:2]
-            if view != self.config.view:
-                self.parent.reset_library()
-            self.config.view = view
-
-    def __save_wine_choice(self) -> None:
-        wine_choice = self.combobox_wine_variant.get_active_iter()
-        if wine_choice is not None:
-            model = self.combobox_wine_variant.get_model()
-            runner, _ = model[wine_choice][:2]            
-            self.config.default_wine_runner = runner
 
     def __save_theme_choice(self) -> None:
         settings = Gtk.Settings.get_default()
@@ -209,10 +160,16 @@ class Preferences(Gtk.Dialog):
 
     @Gtk.Template.Callback("on_button_save_clicked")
     def save_pressed(self, button):
+        library_reset_needed = False
+
+        # comboboxes
         self.__save_locale_choice()
-        self.__save_language_choice()
-        self.__save_view_choice()
-        self.__save_wine_choice()
+        self.__save_combo_value(self.combobox_language, 'lang')
+        self.__save_combo_value(self.combobox_wine_variant, 'default_wine_runner')
+        self.__save_combo_value(self.combobox_windows_installer, 'windows_installer')
+        library_reset_needed = self.__save_combo_value(self.combobox_view, 'view')
+
+        # on/off switches
         self.__save_theme_choice()
         self.config.keep_installers = self.switch_keep_installers.get_active()
         self.config.stay_logged_in = self.switch_stay_logged_in.get_active()
@@ -226,15 +183,19 @@ class Preferences(Gtk.Dialog):
                 self.config.show_windows_games = False
             else:
                 self.config.show_windows_games = self.switch_show_windows_games.get_active()
-                self.parent.reset_library()
+                library_reset_needed=True
 
-        # Only change the install_dir is it was actually changed
+        # Only change the install_dir if it was actually changed
         if self.button_file_chooser.get_filename() != self.config.install_dir:
             if self.__save_install_dir_choice():
                 self.download_manager.cancel_all_downloads()
-                self.parent.reset_library()
+                library_reset_needed=True
             else:
                 self.parent.show_error(_("{} isn't a usable path").format(self.button_file_chooser.get_filename()))
+
+        if library_reset_needed:
+            self.parent.reset_library()
+
         self.destroy()
 
     @Gtk.Template.Callback("on_button_cancel_clicked")

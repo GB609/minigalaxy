@@ -59,6 +59,11 @@ WINE_VARIANTS = [
     ["umu-run", _("UMU-Launcher")]
 ]
 
+WINDOWS_INSTALLER = [
+    ["innoextract", _("OS native innoextract")],
+    ["wine", _("Installer within wine")]
+]
+
 # Game IDs to ignore when received by the API
 IGNORE_GAME_IDS = [
     1424856371,  # Hotline Miami 2: Wrong Number - Digital Comics

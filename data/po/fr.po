@@ -170,6 +170,10 @@ msgstr "L'extraction de l'Innoextract a échoué."
 msgid "Innoextract not installed."
 msgstr "Innoextract n'est pas installé."
 
+#: minigalaxy/installer.py:158
+msgid "Wine not installed."
+msgstr "Wine n'est pas installé."
+
 #. The place directory in which games are installed. Ends with ": ".
 #: data/ui/preferences.ui:118
 msgctxt "install_path"

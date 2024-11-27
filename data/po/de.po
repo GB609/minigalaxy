@@ -169,6 +169,10 @@ msgstr "Entpacken mit Innoextract fehlgeschlagen."
 msgid "Innoextract not installed."
 msgstr "Innoextract ist nicht installiert."
 
+#: minigalaxy/installer.py:158
+msgid "Wine not installed."
+msgstr "Wine ist nicht installiert."
+
 #. The place directory in which games are installed. Ends with ": ".
 #: data/ui/preferences.ui:118
 msgctxt "install_path"
@@ -446,24 +450,39 @@ msgstr "Ob versteckte Spiele in der Bibliothek angezeigt werden oder nicht"
 #: data/ui/preferences.ui:285
 msgctxt "create_menu_shortcuts_tooltip"
 msgid "Whether shortcuts are created for newly installed games or not"
-msgstr ""
-"Ob Verknüpfungen für neu installierte Spiele erstellt werden oder nicht"
+msgstr "Ob Verknüpfungen für neu installierte Spiele erstellt werden oder nicht"
 
 #: data/ui/preferences.ui:298
 msgctxt "windows_wine_variant_tooltip"
 msgid "Define the wine variant to use as default runner for new windows game installations."
-msgstr ""
-"Variante von wine, die standardmäßig für neu installierte Windows-Spiele verwendet werden soll."
+msgstr "Variante von wine, die standardmäßig für neu installierte Windows-Spiele verwendet werden soll."
 
 #: data/ui/preferences.ui:301
 msgctxt "windows_wine_variant"
 msgid "Default wine variant: "
-msgstr ""
-"Standard wine Variante: "
+msgstr "Standard wine Variante: "
+
+#: data/ui/preferences.ui:323 #######
+msgctxt "windows_installer_tooltip"
+msgid "Select the installation method used for windows games."
+msgstr "Wie Windows Spiele installiert werden sollen."
+
+#: data/ui/preferences.ui:326 ########
+msgctxt "windows_installer"
+msgid "Windows game installer: "
+msgstr "Windows Installationsmethode: "
 
 #: minigalaxy/installer.py:172
 msgid "Wine extraction failed."
 msgstr "Entpacken mit Wine fehlgeschlagen."
+
+#: minigalaxy/constants.py:63
+msgid "OS native innoextract"
+msgstr "System installiertes Innoextract"
+
+#: minigalaxy/constants.py:64
+msgid "Installer within wine"
+msgstr "Windows Installationsprogram"
 
 #: minigalaxy/ui/preferences.py:162
 msgid "Wine wasn't found. Showing Windows games cannot be enabled."
