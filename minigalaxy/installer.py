@@ -13,7 +13,7 @@ from minigalaxy.logger import logger
 from minigalaxy.translation import _
 from minigalaxy.launcher import get_execute_command, get_wine_path, wine_restore_game_link
 from minigalaxy.paths import CACHE_DIR, THUMBNAIL_DIR, APPLICATIONS_DIR
-from minigalaxy.wine_utils import is_wine_installed, get_wine_env, get_wine_path
+from minigalaxy.wine_utils import get_wine_env, get_wine_path
 
 
 def get_available_disk_space(location):
