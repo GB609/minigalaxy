@@ -7,9 +7,10 @@ import glob
 import shlex
 import threading
 
+from minigalaxy.config import Config
 from minigalaxy.logger import logger
 from minigalaxy.translation import _
-from minigalaxy.wine_utils import is_wine_installed, get_wine_path
+from minigalaxy.wine_utils import is_wine_installed, get_wine_env, get_wine_path
 
 
 # should go into a separate file or into installer, but not possible ATM because
@@ -23,19 +24,16 @@ def wine_restore_game_link(game):
         os.symlink(relative, game_dir)
 
 
-def config_game(game):
-    prefix = os.path.join(game.install_dir, "prefix")
-    subprocess.Popen(['env', f'WINEPREFIX={prefix}', get_wine_path(game), 'winecfg'])
+def config_game(game, config: Config = Config()):
+    subprocess.Popen(['env', *get_wine_env(game, config), get_wine_path(game, config), 'winecfg'])
 
 
-def regedit_game(game):
-    prefix = os.path.join(game.install_dir, "prefix")
-    subprocess.Popen(['env', f'WINEPREFIX={prefix}', get_wine_path(game), 'regedit'])
+def regedit_game(game, config: Config = Config()):
+    subprocess.Popen(['env', *get_wine_env(game, config), get_wine_path(game, config), 'regedit'])
 
 
-def winetricks_game(game):
-    prefix = os.path.join(game.install_dir, "prefix")
-    subprocess.Popen(['env', f'WINEPREFIX={prefix}', 'winetricks'])
+def winetricks_game(game, config: Config = Config()):
+    subprocess.Popen(['env', *get_wine_env(game, config), 'winetricks'])
 
 
 def start_game(game):
@@ -57,11 +55,13 @@ def start_game(game):
 
 def get_execute_command(game) -> list:
     files = os.listdir(game.install_dir)
+    is_wine_cmd = False
     launcher_type = determine_launcher_type(files)
     if launcher_type in ["start_script", "wine"]:
         exe_cmd = get_start_script_exe_cmd(game)
     elif launcher_type == "windows":
         exe_cmd = get_windows_exe_cmd(game, files)
+        is_wine_cmd = True
     elif launcher_type == "dosbox":
         exe_cmd = get_dosbox_exe_cmd(game, files)
     elif launcher_type == "scummvm":
@@ -76,7 +76,7 @@ def get_execute_command(game) -> list:
     if game.get_info("use_mangohud") is True:
         exe_cmd.insert(0, "mangohud")
         exe_cmd.insert(1, "--dlsym")
-    exe_cmd = get_exe_cmd_with_var_command(game, exe_cmd)
+    exe_cmd = get_exe_cmd_with_var_command(game, exe_cmd, is_wine_cmd)
     logger.info("Launch command for %s: %s", game.name, " ".join(exe_cmd))
     return exe_cmd
 
@@ -102,6 +102,7 @@ def get_exe_cmd_with_var_command(game, exe_cmd):
     var_list = shlex.split(game.get_info("variable"))
     command_list = shlex.split(game.get_info("command"))
 
+    var_list = game.get_info("variable").split()
     if var_list:
         if var_list[0] not in ["env"]:
             var_list.insert(0, "env")
@@ -148,7 +149,7 @@ def get_windows_exe_cmd(game, files):
     # be borked through the old installer.
     wine_restore_game_link(game)
 
-    return ['env', f'WINEPREFIX={prefix}'] + exe_cmd
+    return ['env', *get_wine_env(game)] + exe_cmd
 
 
 def get_dosbox_exe_cmd(game, files):
