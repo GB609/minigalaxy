@@ -13,6 +13,7 @@ from minigalaxy.logger import logger
 from minigalaxy.translation import _
 from minigalaxy.launcher import get_execute_command, get_wine_path, wine_restore_game_link
 from minigalaxy.paths import CACHE_DIR, THUMBNAIL_DIR, APPLICATIONS_DIR
+from minigalaxy.wine_utils import is_wine_installed, get_wine_env, get_wine_path
 
 
 def get_available_disk_space(location):
@@ -48,12 +49,10 @@ def check_diskspace(required_size, location):
 def install_game(  # noqa: C901
         game: Game,
         installer: str,
-        language: str,
-        install_dir: str,
-        keep_installers: bool,
-        create_desktop_file: bool,
-        use_innoextract: bool = True,  # not set externally as of yet
+        config: Config
 ):
+    install_dir = config.install_dir
+    use_innoextract = True  # not set externally as of yet
     error_message = ""
     tmp_dir = ""
     logger.info("Installing {}".format(game.name))
@@ -65,17 +64,17 @@ def install_game(  # noqa: C901
         if not error_message:
             error_message, tmp_dir = make_tmp_dir(game)
         if not error_message:
-            error_message, installed_to_tmp = extract_installer(game, installer, tmp_dir, language)
+            error_message, installed_to_tmp = extract_installer(game, installer, tmp_dir, config)
         if not error_message:
             error_message = move_and_overwrite(game, tmp_dir, installed_to_tmp)
         if not error_message:
             error_message = copy_thumbnail(game)
-        if not error_message and create_desktop_file:
+        if not error_message and config.create_applications_file:
             error_message = create_applications_file(game)
     except Exception:
         logger.error("Error installing game %s", game.name, exc_info=1)
         error_message = _("Unhandled error.")
-    _removal_error = remove_installer(game, installer, install_dir, keep_installers)
+    _removal_error = remove_installer(game, installer, install_dir, config.keep_installers)
     error_message = error_message or _removal_error or postinstaller(game)
     if error_message:
         logger.error(error_message)
@@ -125,12 +124,12 @@ def make_tmp_dir(game):
     return error_message, temp_dir
 
 
-def extract_installer(game: Game, installer: str, temp_dir: str, language: str):
+def extract_installer(game: Game, installer: str, temp_dir: str, config: Config):
     # Extract the installer
     if game.platform in ["linux"]:
         return extract_linux(installer, temp_dir)
     else:
-        return extract_windows(game, installer, language)
+        return extract_windows(game, installer, config)
 
 
 def extract_linux(installer, temp_dir):
@@ -145,20 +144,21 @@ def extract_linux(installer, temp_dir):
     return err_msg, True
 
 
-def extract_windows(game: Game, installer: str, language: str):
+def extract_windows(game: Game, installer: str, config: Config):
     if shutil.which("innoextract"):
-        game_lang = lang_install(installer, language)
-        game_lang = game_lang.split('=')[1]  # lang_install returns '--language=localeCode'
+        install_lang = lang_install(installer, config.lang)
+        install_lang = install_lang.split('=')[1]  # lang_install returns '--language=localeCode'
     else:
-        game_lang = 'en-US'
+        install_lang = 'en-US'
 
-    logger.info(f'use {game_lang} for installer')
+    logger.info(f'use {install_lang} for installer')
 
-    return extract_by_wine(game, installer, game_lang), False
+    return extract_by_wine(game, installer, install_lang, config), False
 
 
 def extract_by_innoextract(installer: str, temp_dir: str, language: str, use_innoextract: bool):
     err_msg = ""
+
     if use_innoextract:
         lang = lang_install(installer, language)
         cmd = ["innoextract", installer, "-d", temp_dir, "--gog", lang]
@@ -186,14 +186,15 @@ def extract_by_innoextract(installer: str, temp_dir: str, language: str, use_inn
 
 
 def extract_by_wine(game, installer, game_lang, config=Config()):
+    err_msg = ""
     # Set the prefix for Windows games
     prefix_dir = os.path.join(game.install_dir, "prefix")
     wine_env = [
-        f"WINEPREFIX={prefix_dir}",
-        "WINEDLLOVERRIDES=winemenubuilder.exe=d"
+        # installer additionally disables menubuilder to prevent windows shortcuts
+        "WINEDLLOVERRIDES=winemenubuilder.exe=d",
+        *get_wine_env(game, config)
     ]
     wine_bin = get_wine_path(game)
-
     if not os.path.exists(prefix_dir):
         os.makedirs(prefix_dir, mode=0o755)
         # Creating the prefix before modifying dosdevices
