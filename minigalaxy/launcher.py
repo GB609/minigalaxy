@@ -102,7 +102,7 @@ def get_exe_cmd_with_var_command(game, exe_cmd):
     var_list = shlex.split(game.get_info("variable"))
     command_list = shlex.split(game.get_info("command"))
 
-    var_list = game.get_info("variable").split()
+    var_list = shlex.split(game.get_info("variable"))
     if var_list:
         if var_list[0] not in ["env"]:
             var_list.insert(0, "env")
