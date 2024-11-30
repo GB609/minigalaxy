@@ -114,7 +114,7 @@ def get_exe_cmd_with_var_command(game, exe_cmd):
 
 
 def get_windows_exe_cmd(game, files):
-    exe_cmd = [""]
+    exe_cmd = []
     prefix = os.path.join(game.install_dir, "prefix")
 
     # Find game executable file
@@ -137,7 +137,7 @@ def get_windows_exe_cmd(game, files):
                             if "arguments" in task:
                                 exe_cmd += shlex.split(task["arguments"])
                             break
-    if exe_cmd == [""]:
+    if len(exe_cmd) == 0:
         # in case no goggame info file was found
         executables = glob.glob(game.install_dir + '/*.exe')
         executables.remove(os.path.join(game.install_dir, "unins000.exe"))

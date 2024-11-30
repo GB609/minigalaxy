@@ -1,4 +1,3 @@
-import sys
 import os
 import shutil
 import shlex
@@ -162,7 +161,7 @@ def extract_by_innoextract(installer: str, temp_dir: str, language: str, use_inn
     if use_innoextract:
         lang = lang_install(installer, language)
         cmd = ["innoextract", installer, "-d", temp_dir, "--gog", lang]
-        stdout, stderr, exitcode = _exe_cmd(cmd)
+        stdout, stderr, exitcode = _exe_cmd(cmd, False, True)
         if exitcode not in [0]:
             err_msg = _("Innoextract extraction failed.")
         else:
