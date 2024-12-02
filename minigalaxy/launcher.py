@@ -149,7 +149,7 @@ def get_windows_exe_cmd(game, files):
     # be borked through the old installer.
     wine_restore_game_link(game)
 
-    return ['env', *get_wine_env(game)] + exe_cmd
+    return [shutil.which('env'), *get_wine_env(game)] + exe_cmd
 
 
 def get_dosbox_exe_cmd(game, files):
@@ -161,7 +161,7 @@ def get_dosbox_exe_cmd(game, files):
         if re.match(r'^dosbox_?([a-z]|[A-Z]|\d)+_single\.conf$', file):
             dosbox_config_single = file
     logger.info("Using system's dosbox to launch %s", game.name)
-    return ["dosbox", "-conf", dosbox_config, "-conf", dosbox_config_single, "-no-console", "-c", "exit"]
+    return [shutil.which("dosbox"), "-conf", dosbox_config, "-conf", dosbox_config_single, "-no-console", "-c", "exit"]
 
 
 def get_scummvm_exe_cmd(game, files):
@@ -171,7 +171,7 @@ def get_scummvm_exe_cmd(game, files):
             scummvm_config = file
             break
     logger.info("Using system's scrummvm to launch %s", game.name)
-    return ["scummvm", "-c", scummvm_config]
+    return [shutil.which("scummvm"), "-c", scummvm_config]
 
 
 def get_start_script_exe_cmd(game):
@@ -187,8 +187,8 @@ def get_final_resort_exe_cmd(game, files):
         if re.match(r'^goggame-[0-9]*\.info$', file):
             os.chdir(os.path.join(game.install_dir, game_dir))
             with open(file, 'r') as info_file:
-                info = json.loads(info_file.read())
-                exe_cmd = ["./{}".format(info["playTasks"][0]["path"])]
+                info = json.loads(info_file.read())                
+                exe_cmd = [os.path.join(game.install_dir, info["playTasks"][0]["path"])]
     return exe_cmd
 
 
