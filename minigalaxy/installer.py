@@ -394,7 +394,8 @@ def _exe_cmd(cmd, print_output=False):
                 print(data, end='')
         if data := process.stderr.read():
             std_err += data
-            print(data, end='')
+            if print_output:
+                print(data, end='')
         time.sleep(0.01)
 
     process.stdout.close()
