@@ -385,14 +385,16 @@ def _exe_cmd(cmd, print_output=False):
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         universal_newlines=True, encoding="utf-8"
     )
+    os.set_blocking(process.stdout.fileno(), False)
+    os.set_blocking(process.stderr.fileno(), False)
     while not done:
         if (return_code := process.poll()) is not None:
             done = True
-        if data := process.stdout.read():
+        if data := process.stdout.readline():
             std_out += data
             if print_output:
                 print(data, end='')
-        if data := process.stderr.read():
+        if data := process.stderr.readline():
             std_err += data
             if print_output:
                 print(data, end='')
