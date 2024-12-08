@@ -17,6 +17,17 @@ def get_wine_path(game):
     if custom_wine_path and custom_wine_path != shutil.which(binary_name):
         binary_name = custom_wine_path
     return binary_name
+    
+    
+# should go into a separate file or into installer, but not possible ATM because
+# it's a circular import otherwise
+def wine_restore_game_link(game):
+    game_dir = os.path.join(game.install_dir, 'prefix', 'dosdevices', 'c:', 'game')
+    if not os.path.exists(game_dir):
+        # 'game' directory itself does not count
+        canonical_prefix = os.path.realpath(os.path.join(game_dir, '..'))
+        relative = os.path.relpath(game.install_dir, canonical_prefix)
+        os.symlink(relative, game_dir)
 
 
 def config_game(game):
@@ -142,10 +153,7 @@ def get_windows_exe_cmd(game, files):
     # Backwards compatibility with windows games installed before installer fixes.
     # Will not fix games requiring registry keys, since the paths will already
     # be borked through the old installer.
-    gamelink = os.path.join(prefix, 'dosdevices', 'c:', 'game')
-    if not os.path.exists(gamelink):
-        os.makedirs(os.path.join(prefix, 'dosdevices', 'c:'))
-        os.symlink('../..', gamelink)
+    wine_restore_game_link(game)
 
     return ['env', f'WINEPREFIX={prefix}'] + exe_cmd
 
