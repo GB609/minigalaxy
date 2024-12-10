@@ -426,27 +426,35 @@ def _mv(source_dir, target_dir):
 # "--list-languages" option returns "en-US", "fr-FR" etc... for these games.
 # Others installers return "French : Français" but disallow to choose game's language before installation
 def match_game_lang_to_installer(installer: str, language: str):
-    languages = []
     stdout, stderr, ret_code = _exe_cmd(["innoextract", installer, "--list-languages"])
+    if ret_code not in [0]:
+        logger.error(stderr)
+        return "en-US"
 
     for game_lang in SUPPORTED_DOWNLOAD_LANGUAGES:
         if language == game_lang[0]:
+            # regex pattern: (installer-lang-id) : translated_lang_name
             lang_name_regex = re.compile(f'(\\w+)\\s*:\\s*{game_lang[1]}.*', re.IGNORECASE)
+            print(lang_name_regex)
             break
 
     for line in stdout.split('\n'):
         if not line.startswith(' -'):
             continue
-        languages.append(line[3:])
-    for lang in languages:
+        
+        lang = line[3:]
         if "-" in lang:  # lang must be like "en-US" only.
             if language == lang[0:2]:
                 return lang
 
         elif match := lang_name_regex.match(lang):
-            """handles the case "French : Français" with a pattern matching on the language name.
+            """handles cases like "French : Français" with a pattern matching on the language name.
+            This only works if the language used for minigalaxy corresponds with the desired game
+            language because the titles used in SUPPORTED_DOWNLOAD_LANGUAGES are pre-translated.
+            So, with e.g. french locale, the regex " - (\w+): Allemand" will not match the line 
+            ' - german: Deutsch' from the installer. 
             Won't work all the time but it's at least a better fallback try than just
-            returning en-US. If the language doesn't exists, the installer will just ignore
+            returning en-US. If the language doesn't exist, the installer will just ignore
             the argument anyway"""
             return match.group(1)
 
