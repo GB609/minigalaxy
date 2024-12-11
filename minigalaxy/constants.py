@@ -77,7 +77,7 @@ SUPPORTED_LOCALES = [
 VIEWS = [
     ["grid", _("Grid")],
     ["list", _("List")],
-]
+
 
 # Game IDs to ignore when received by the API
 IGNORE_GAME_IDS = [

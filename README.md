@@ -88,6 +88,12 @@ Other Linux distributions may work as well. Minigalaxy requires the following de
 - Python Requests
 - gettext
 
+To run windows games, the following optional dependencies are required:
+
+- wine or umu-launcher as an alternative to standard wine
+- innoextract: Used to pre-determine game install language
+- zenity: Used by UMU-Launcher to show progress dialogs when updating the proton framework. Not required to use UMU.
+
 ## Installation
 
 <a href="https://repology.org/project/minigalaxy/versions">
