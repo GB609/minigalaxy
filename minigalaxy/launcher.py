@@ -12,11 +12,12 @@ from minigalaxy.translation import _
 
 
 def get_wine_path(game):
-    binary_name = "wine"
+    return "umu-run"
+    """binary_name = "wine"
     custom_wine_path = game.get_info("custom_wine")
     if custom_wine_path and custom_wine_path != shutil.which(binary_name):
         binary_name = custom_wine_path
-    return binary_name
+    return binary_name"""
 
 
 # should go into a separate file or into installer, but not possible ATM because
@@ -157,8 +158,14 @@ def get_windows_exe_cmd(game, files):
     # Will not fix games requiring registry keys, since the paths will already
     # be borked through the old installer.
     wine_restore_game_link(game)
-
-    return ['env', f'WINEPREFIX={prefix}'] + exe_cmd
+    
+    wine_env = [
+        f'WINEPREFIX={prefix}', 
+        'PROTONPATH=GE-Proton', 
+        f'GAMEID={game.id}',
+        'PROTON_VERB=runinprefix'
+    ]
+    return ['env', *wine_env] + exe_cmd
 
 
 def get_dosbox_exe_cmd(game, files):

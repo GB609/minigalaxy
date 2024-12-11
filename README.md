@@ -1,3 +1,10 @@
+# TEMPORARY PLAY-TEST BRANCH #
+Hardcodes a configuration option i want to add support for in upstream minigalaxy.
+1. wine executable will be hard-set to umu-run
+2. PROTONPATH will be GE-Proton because default UMU-Proton lacks a few media codecs
+3. GAMEID is not looked up, just set to be "'gog-'${gameid}"
+4. Buttons in game properties for Wineconfig, winetricks etc. will not have umu env vars set and thus possibly be broken
+
 # Minigalaxy
 
 A simple GOG client for Linux.
