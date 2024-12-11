@@ -156,7 +156,7 @@ def get_windows_exe_cmd(game, files):
     # be borked through the old installer.
     wine_restore_game_link(game)
 
-    return ['env', f'WINEPREFIX={prefix}'] + exe_cmd
+    return ['env', f'WINEPREFIX={prefix}', 'PROTONPATH=Ge-Proton', f'GAMEID={game.id}'] + exe_cmd
 
 
 def get_dosbox_exe_cmd(game, files):
