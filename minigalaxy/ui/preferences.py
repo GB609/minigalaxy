@@ -1,6 +1,6 @@
 import os
 import locale
-import shutil
+
 from minigalaxy.translation import _
 from minigalaxy.paths import UI_DIR
 from minigalaxy.constants import SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS, WINE_VARIANTS
@@ -87,59 +87,19 @@ class Preferences(Gtk.Dialog):
             setattr(self.config, prop_name, value)
         return value != current_config
 
-    def __set_locale_list(self) -> None:
-        locales = Gtk.ListStore(str, str)
-        for local in SUPPORTED_LOCALES:
-            locales.append(local)
-
-        self.combobox_program_language.set_model(locales)
-        self.combobox_program_language.set_entry_text_column(1)
-        self.renderer_text = Gtk.CellRendererText()
-        self.combobox_program_language.pack_start(self.renderer_text, False)
-        self.combobox_program_language.add_attribute(self.renderer_text, "text", 1)
-
-        # Set the active option
-        current_locale = self.config.locale
-        default_locale = locale.getdefaultlocale()
-        if current_locale is None:
-            locale.setlocale(locale.LC_ALL, default_locale)
-        for key in range(len(locales)):
-            if locales[key][:1][0] == current_locale:
-                self.combobox_program_language.set_active(key)
-                break
-
     def __save_locale_choice(self) -> None:
-        new_locale = self.combobox_program_language.get_active_iter()
-        if new_locale is not None:
-            model = self.combobox_program_language.get_model()
-            locale_choice = model[new_locale][-2]
-            if locale_choice == '':
-                default_locale = locale.getdefaultlocale()[0]
-                locale.setlocale(locale.LC_ALL, (default_locale, 'UTF-8'))
-                self.config.locale = locale_choice
-            else:
-                try:
-                    locale.setlocale(locale.LC_ALL, (locale_choice, 'UTF-8'))
-                    self.config.locale = locale_choice
-                except locale.Error:
-                    self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
-                                             "your system."))
+        current_locale = self.config.locale
+        if self.__save_combo_value(self.combobox_program_language, 'locale'):
+            new_locale = self.config.locale
+            if new_locale == '':
+                new_locale = locale.getdefaultlocale()[0]
 
-    def __save_language_choice(self) -> None:
-        lang_choice = self.combobox_language.get_active_iter()
-        if lang_choice is not None:
-            model = self.combobox_language.get_model()
-            lang, _ = model[lang_choice][:2]
-            self.config.lang = lang
-
-    def __save_view_choice(self) -> None:
-        view_choice = self.combobox_view.get_active_iter()
-        if view_choice is not None:
-            model = self.combobox_view.get_model()
-            view, _ = model[view_choice][:2]
-            if view != self.config.view:
-                self.parent.reset_library()
-            self.config.view = view
+            try:
+                locale.setlocale(locale.LC_ALL, (new_locale, 'UTF-8'))
+            except locale.Error:
+                self.config.locale = current_locale
+                self.parent.show_error(_("Failed to change program language. Make sure locale is generated on "
+                                         "your system."))
 
     def __save_theme_choice(self) -> None:
         settings = Gtk.Settings.get_default()

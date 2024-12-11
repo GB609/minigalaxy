@@ -1,20 +1,39 @@
 import copy
+import shutil
+import os
 from unittest import TestCase, mock
 from unittest.mock import patch, mock_open, MagicMock
 
+from minigalaxy.paths import CONFIG_GAMES_DIR
 from minigalaxy.game import Game
 from minigalaxy import installer
 from minigalaxy.translation import _
 
 
 class Test(TestCase):
+
+    def setUp(self):
+        print('preparing config files for test')
+        if not os.path.exists(CONFIG_GAMES_DIR):
+            os.makedirs(CONFIG_GAMES_DIR, mode=0o755)
+        return super().setUp()
+
+    def tearDown(self):
+        print("removing config files changed during the test...")
+        shutil.rmtree(path=CONFIG_GAMES_DIR, ignore_errors=True)
+        return super().tearDown()
+
+    @mock.patch('minigalaxy.config')
     @mock.patch('os.path.exists')
-    def test_install_game(self, mock_exists):
+    def test_install_game(self, mock_exists, mock_config):
         """[scenario: unhandled error]"""
         mock_exists.side_effect = FileNotFoundError("Testing unhandled errors during install")
         game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
         exp = "Unhandled error."
-        obs = installer.install_game(game, installer="", language="", install_dir="", keep_installers=False, create_desktop_file=True)
+        mock_config.keep_installers = False
+        mock_config.install_dir = ""
+        mock_config.create_desktop_file = True
+        obs = installer.install_game(game, installer="", config=mock_config)
         self.assertEqual(exp, obs)
 
     @mock.patch('os.path.exists')
@@ -149,35 +168,39 @@ class Test(TestCase):
         obs = installer.match_game_lang_to_installer(installer_path, "en")
         self.assertEqual(exp, obs)
 
+    @mock.patch('minigalaxy.config')
     @mock.patch('subprocess.Popen')
+    @mock.patch("minigalaxy.wine_utils")
     @mock.patch("os.path.exists")
-    @mock.patch("os.symlink")
-    def test1_extract_by_wine(self, mock_symlink, mock_path_exists, mock_subprocess):
+    def test1_extract_by_wine(self, mock_path_exists, wine_path, mock_subprocess, mock_config):
         """[scenario: success]"""
+        wine_path.get_wine_path().return_value = '/bin/wine'
         mock_path_exists.return_value = True
         mock_subprocess().poll.return_value = 0
         mock_subprocess().stdout.readlines.return_value = ["stdout", "stderr"]
         game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
         installer_path = "/home/makson/.cache/minigalaxy/download/Absolute Drift/setup_absolute_drift_1.0f_(64bit)_(47863).exe"
-        temp_dir = "/home/makson/.cache/minigalaxy/extract/1136126792"
         exp = ""
-        obs = installer.extract_by_wine(game, installer_path, temp_dir)
+        obs = installer.extract_by_wine(game, installer_path, mock_config)
         self.assertEqual(exp, obs)
 
+    @mock.patch('minigalaxy.config')
     @mock.patch('subprocess.Popen')
     @mock.patch("os.path.exists")
     @mock.patch("os.unlink")
     @mock.patch("os.symlink")
-    def test2_extract_by_wine(self, mock_symlink, mock_unlink, mock_path_exists, mock_subprocess):
+    #FIMXE: Make run again: problem is diagnostic install script written on failure
+    def test2_extract_by_wine(self, mock_symlink, mock_unlink, mock_path_exists, mock_subprocess, mock_config):
         """[scenario: install failed]"""
         mock_path_exists.return_value = True
+        #side_effect = (True, True, False)
         mock_subprocess().poll.return_value = 1
         mock_subprocess().stdout.readlines.return_value = ["stdout", "stderr"]
         game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
         installer_path = "/home/makson/.cache/minigalaxy/download/Absolute Drift/setup_absolute_drift_1.0f_(64bit)_(47863).exe"
         temp_dir = "/home/makson/.cache/minigalaxy/extract/1136126792"
         exp = "Wine extraction failed."
-        obs = installer.extract_by_wine(game, installer_path, temp_dir)
+        obs = installer.extract_by_wine(game, installer_path, temp_dir, mock_config)
         self.assertEqual(exp, obs)
 
     @mock.patch('subprocess.Popen')
