@@ -23,11 +23,12 @@ def get_wine_path(game):
 # should go into a separate file or into installer, but not possible ATM because
 # it's a circular import otherwise
 def wine_restore_game_link(game):
-    game_dir = os.path.join(game.install_dir, 'prefix', 'dosdevices', 'c:', 'game')
+    drive_c = os.path.join(game.install_dir, 'prefix', 'drive_c')
+    game_dir = os.path.join(drive_c, 'game')
+    if not os.path.exists(drive_c):
+        os.makedirs(drive_c, mode=0o755)
     if not os.path.exists(game_dir):
-        # 'game' directory itself does not count
-        canonical_prefix = os.path.realpath(os.path.join(game_dir, '..'))
-        relative = os.path.relpath(game.install_dir, canonical_prefix)
+        relative = os.path.relpath(game.install_dir, drive_c)
         os.symlink(relative, game_dir)
 
 
@@ -224,8 +225,10 @@ def set_fps_display(game):
 
 def run_game_subprocess(game):
     try:
+        cmd = get_execute_command(game)
+        print(f'running: {shlex.join(cmd)}')
         process = subprocess.Popen(
-            get_execute_command(game),
+            cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,

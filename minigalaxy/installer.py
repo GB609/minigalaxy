@@ -59,10 +59,10 @@ def install_game(  # noqa: C901
     tmp_dir = ""
     logger.info("Installing {}".format(game.name))
     try:
-        if not error_message:
-            error_message = verify_installer_integrity(game, installer)
-        if not error_message:
-            error_message = verify_disk_space(game, installer)
+        #if not error_message:
+            #error_message = verify_installer_integrity(game, installer)
+        #if not error_message:
+            #error_message = verify_disk_space(game, installer)
         if not error_message:
             error_message, tmp_dir = make_tmp_dir(game)
         if not error_message:
@@ -170,7 +170,7 @@ def extract_by_wine(game, installer, game_lang, config=Config()):
     if not os.path.exists(prefix_dir):
         os.makedirs(prefix_dir, mode=0o755)
         # Creating the prefix before modifying dosdevices
-        command = ["env", *wine_env, wine_bin, "wineboot", "-u"]
+        command = ["env", *wine_env, wine_bin, "wineboot", "-h"]
         if not try_wine_command(command):
             return _("Wineprefix creation failed.")
 
