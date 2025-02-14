@@ -141,7 +141,7 @@ class Library(Gtk.Viewport):
                 new_tiles.append(self.__add_gametile(game))
 
         if new_tiles:
-            Glib.idle_add(self.__restart_downloads, new_tiles)
+            GLib.idle_add(self.__restart_downloads, new_tiles)
 
     def __add_gametile(self, game):
         view = self.config.view
