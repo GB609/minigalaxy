@@ -135,9 +135,13 @@ class Library(Gtk.Viewport):
             if tile.game in self.games:
                 games_with_tiles.append(tile.game)
 
+        new_tiles = []
         for game in self.games:
             if game not in games_with_tiles:
-                self.__add_gametile(game)
+                new_tiles.append(self.__add_gametile(game))
+
+        if new_tiles:
+            Glib.idle_add(self.__restart_downloads, new_tiles)
 
     def __add_gametile(self, game):
         view = self.config.view
@@ -146,14 +150,13 @@ class Library(Gtk.Viewport):
         elif view == "list":
             game_tile = GameTileList(self, game)
 
-        # Start download if Minigalaxy was closed while downloading this game
-        game_tile.resume_download_if_expected()
         self.flowbox.add(game_tile)
         '''
         using flowbox.show_all at this point would overrule any state-based
         hide() statements in game_tile (progress_bar in GameTileList)
         '''
         game_tile.show()
+        return game_tile
 
     def __get_installed_games(self) -> List[Game]:
         # Make sure the install directory exists
@@ -208,6 +211,18 @@ class Library(Gtk.Viewport):
             if len(game.category) > 0:  # exclude games without set category
                 game_category_dict[game.name] = game.category
         update_game_categories_file(game_category_dict, CATEGORIES_FILE_PATH)
+
+    def __restart_downloads(self, tile_list):
+        '''Resume downloads for all games that were currently downloading when minigalaxy was closed'''
+        current_downloads = self.config.current_downloads
+        downloads_ordered = []
+        for tile in self.tile_list:
+            game = tile.game
+            if game.id in current_downloads:
+                downloads_ordered[current_downloads.index(game.id)] = tile
+
+        for game_tile in downloads_ordered:
+            game_tile.resume_download_if_expected()
 
 
 def get_installed_windows_games(full_path, game_categories_dict=None):
