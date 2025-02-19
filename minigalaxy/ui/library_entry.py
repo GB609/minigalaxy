@@ -148,8 +148,9 @@ class LibraryEntry:
                 time.sleep(1)
         return set_result
 
-    def __set_image(self, save_location):
+    def __set_image(self, download):
         set_result = False
+        save_location = download.save_location
         self.game.set_install_dir(self.config.install_dir)
         thumbnail_install_dir = os.path.join(self.game.install_dir, "thumbnail.jpg")
         if os.path.isfile(thumbnail_install_dir):
@@ -200,7 +201,7 @@ class LibraryEntry:
         if not result:
             GLib.idle_add(self.update_to_state, cancel_to_state)
 
-    def __download(self, download_info, download_type, finish_func, cancel_to_state):  # noqa: C901
+    def __download(self, download_info, download_type, finish_func, context_args):  # noqa: C901
         download_success = True
         self.game.set_install_dir(self.config.install_dir)
         GLib.idle_add(self.update_to_state, State.QUEUED)
@@ -249,10 +250,11 @@ class LibraryEntry:
                 download_type=DownloadType.GAME,
                 finish_func=finish_func_wrapper(finish_func),
                 progress_func=self.set_progress,
-                cancel_func=lambda: self.__cancel(to_state=cancel_to_state),
+                cancel_func=self.__download_cancelled,
                 number=number_of_files - key,
                 out_of_amount=number_of_files,
-                game=self.game
+                game=self.game,
+                callback_context=context_args
             )
             download_files.insert(0, download)
         self.download_list.extend(download_files)
@@ -310,9 +312,13 @@ class LibraryEntry:
             install_success = False
         return install_success
 
-    def __cancel(self, to_state):
-        self.download_list = []
-        GLib.idle_add(self.update_to_state, to_state)
+    def __download_cancelled(self, download=None, reason=None):
+        if not download:
+            return
+        if download in self.download_list:
+            self.download_list.remove(download)
+
+        GLib.idle_add(self.update_to_state, download.callback_context['cancel_target_state'])
         GLib.idle_add(self.reload_state)
 
     def __download_update(self) -> None:
@@ -349,22 +355,20 @@ class LibraryEntry:
         for dlc in self.game.dlcs:
             download_info = self.api.get_download_info(self.game, dlc_installers=dlc["downloads"]["installers"])
             if self.game.is_update_available(version_from_api=download_info["version"], dlc_title=dlc["title"]):
-                self.__download_dlc(dlc["downloads"]["installers"])
+                self.__download_dlc(dlc["downloads"]["installers"], download_info=download_info)
 
-    def __download_dlc(self, dlc_installers) -> None:
-        def finish_func(save_location):
-            self.__install_dlc(save_location, dlc_title=dlc_title)
+    def __download_dlc(self, dlc_installers, download_info=None) -> None:
+        if not download_info:
+            download_info = self.api.get_download_info(self.game, dlc_installers=dlc_installers)
 
-        download_info = self.api.get_download_info(self.game, dlc_installers=dlc_installers)
-        dlc_title = self.game.name
-        for dlc in self.game.dlcs:
-            if dlc["downloads"]["installers"] == dlc_installers:
-                dlc_title = dlc["title"]
-        cancel_to_state = State.INSTALLED
-        result = self.__download(download_info, DownloadType.GAME_DLC, finish_func,
-                                 cancel_to_state)
+        dlc_title = dlc_installers["title"]
+        context = DownloadContext(
+            cancel_state = State.INSTALLED,
+            dlc_title = dlc_title
+        )
+        result = self.__download(download_info, DownloadType.GAME_DLC, self.__install_dlc, context)
         if not result:
-            GLib.idle_add(self.update_to_state, cancel_to_state)
+            GLib.idle_add(self.update_to_state, context.cancel_state)
 
     def __install_dlc(self, save_location, dlc_title):
         install_success = self.__install(save_location, dlc_title=dlc_title)
@@ -433,7 +437,7 @@ class LibraryEntry:
                 self.download_manager.download_now(download)
                 GLib.idle_add(image.set_from_file, dlc_icon_path)
 
-    def set_progress(self, percentage: int):
+    def set_progress(self, download, percentage: int):
         if self.current_state in [State.QUEUED, State.INSTALLED]:
             GLib.idle_add(self.update_to_state, State.DOWNLOADING)
         if self.progress_bar:
@@ -569,3 +573,9 @@ class LibraryEntry:
         self.current_state = state
         if state in self.STATE_UPDATE_HANDLERS:
             self.STATE_UPDATE_HANDLERS[state]()
+
+class DownloadContext:
+    def __init__(self, cancel_state=None, completion_state=None, dlc_title=None):
+        self.cancel_state = cancel_state
+        self.completion_state = completion_state
+        self.dlc_title = dlc_title
