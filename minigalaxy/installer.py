@@ -795,6 +795,7 @@ class InstallTask:
         # id was passed which is not in the dlc list
         return game.name
 
+
 class InstallerQueue:
     """
     Special queue which includes a worker thread to handle game installations.

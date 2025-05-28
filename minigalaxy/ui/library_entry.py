@@ -2,7 +2,6 @@ import os
 import re
 import shutil
 import threading
-import time
 import urllib.parse
 
 from minigalaxy.api import NoDownloadLinkFound
@@ -488,7 +487,7 @@ class LibraryEntry:
         if self.game.is_installed() and THUMBNAIL_DIR == os.path.dirname(thumbnail_file):
             thumbnail_install_dir = self.game.get_thumbnail_path(use_fallback=False)
             shutil.copy2(thumbnail_file, thumbnail_install_dir)
-            thumbnail_file=thumbnail_install_dir
+            thumbnail_file = thumbnail_install_dir
 
         GLib.idle_add(self.image.set_from_file, thumbnail_file)
         return True
