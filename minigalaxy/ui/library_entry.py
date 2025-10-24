@@ -569,8 +569,10 @@ class LibraryEntry:
 
     def set_main_button(clickable, label=None, tooltip=None):
         self.button.set_sensitive(clickable)
-        self.button.set_label(label) if label is not None
-        self.button.set_tooltip_text(tooltip) if tooltip is not None
+        if label is not None:
+            self.button.set_label(label)
+        if tooltip is not None:
+            self.button.set_tooltip_text(tooltip)
 
     def allowed_menu_options(self, *buttons, info_buttons=True):
         if not buttons and not info_buttons:
