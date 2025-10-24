@@ -716,10 +716,12 @@ class InstallerInventory:
 
 
 class InstallResultType(Enum):
-    SUCCESS = 1
-    FAILURE = 2
-    CHECKSUM_ERROR = 3
-    POST_INSTALL_FAILURE = 4
+    VERIFY_START = 1
+    INSTALL_START = 2
+    SUCCESS = 3
+    FAILURE = 4
+    CHECKSUM_ERROR = 5
+    POST_INSTALL_FAILURE = 6
 
 
 class InstallResult:
