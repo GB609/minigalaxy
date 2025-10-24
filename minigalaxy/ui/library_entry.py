@@ -567,6 +567,22 @@ class LibraryEntry:
         else:
             self.update_to_state(State.DOWNLOADABLE)
 
+    def set_main_button(clickable, label=None, tooltip=None):
+        self.button.set_sensitive(clickable)
+        self.button.set_label(label) if label is not None
+        self.button.set_tooltip_text(tooltip) if tooltip is not None
+
+    def allowed_menu_options(self, *buttons, info_buttons=True):
+        if not buttons and not info_buttons:
+            self.menu_button.hide()
+            return
+        self.menu_button.show()
+        for b in [self.menu_button_update, self.menu_button_dlc, self.menu_button_uninstall]:
+            if b in buttons:
+                b.show()
+            else:
+                b.hide()
+
     def state_downloadable(self):
         self.button.set_label(_("Download"))
         self.button.set_tooltip_text(_("Download and install the game"))
