@@ -567,7 +567,7 @@ class LibraryEntry:
         else:
             self.update_to_state(State.DOWNLOADABLE)
 
-    def set_main_button(clickable, label=None, tooltip=None):
+    def set_main_button(self, clickable, label=None, tooltip=None):
         self.button.set_sensitive(clickable)
         if label is not None:
             self.button.set_label(label)
