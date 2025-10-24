@@ -74,7 +74,8 @@ def install_game(  # noqa: C901
         keep_installers: bool,
         create_desktop_file: bool,
         installer_inventory=None,
-        raise_error=False
+        raise_error=False,
+        progress_callback=None
 ):
     error_message = ""
     error = None
@@ -770,12 +771,16 @@ class InstallTask:
 
     def execute(self):
         try:
-            install_game(*self.arg_array, **self.named_args, raise_error=True)
+            install_game(*self.arg_array, **self.named_args, raise_error=True, progress_callback=self.notifyStep)
             self.callback(InstallResult(self.installer_id, InstallResultType.SUCCESS, self.game.install_dir, None))
         except InstallException as e:
             logger.error("Error installing item %s: %s", self.installer_id, e.message, exc_info=1)
             self.callback(InstallResult(self.installer_id, e.fail_type, e.message, e.data))
 
+    def notifyStep(self, result_type: InstallResultType, reason='', details=None):
+        '''Small proxy method to be passed to install_game for intermediate progress report'''
+        self.callback(InstallResult(self.installer_id, result_type, reason, details))
+        
     def __eq__(self, other):
         if not isinstance(other, InstallTask):
             return False
