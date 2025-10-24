@@ -780,7 +780,7 @@ class InstallTask:
     def notifyStep(self, result_type: InstallResultType, reason='', details=None):
         '''Small proxy method to be passed to install_game for intermediate progress report'''
         self.callback(InstallResult(self.installer_id, result_type, reason, details))
-    
+
     def __eq__(self, other):
         if not isinstance(other, InstallTask):
             return False
