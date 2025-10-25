@@ -86,8 +86,7 @@ def install_game(  # noqa: C901
         if not installer_inventory:
             installer_inventory = InstallerInventory.from_file_system(installer)
 
-        fail_on_error(verify_installer_integrity(game, installer_inventory),
-                      InstallResultType.CHECKSUM_ERROR)
+        verify_installer_integrity(game, installer_inventory, progress_callback)
 
         fail_on_error(verify_disk_space(game, installer), InstallResultType.FAILURE)
 
@@ -147,7 +146,7 @@ def fail_on_error(message_to_test, fail_type=None, data=None):
     return remaining_args
 
 
-def verify_installer_integrity(game, installer_inventory):
+def verify_installer_integrity(game, installer_inventory, progress_callback=None):
     error_message = []
     invalid_files = {}
 
@@ -172,7 +171,8 @@ def verify_installer_integrity(game, installer_inventory):
             error_message.append(_("{} was corrupted. Please download it again.").format(installer_file_name))
             invalid_files[installer] = calculated_checksum
 
-    return '\n'.join(error_message), invalid_files
+    if error_message:
+        raise InstallException('\n'.join(error_message), InstallResultType.CHECKSUM_ERROR, invalid_files)
 
 
 def verify_disk_space(game, installer):
