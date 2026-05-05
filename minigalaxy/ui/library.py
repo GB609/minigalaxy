@@ -18,6 +18,7 @@ from minigalaxy.ui.gametilelist import GameTileList
 from minigalaxy.ui.gtk import Gtk, GLib, load_ui
 
 from typing import List
+from minigalaxy.platforms import update_supported_platforms
 
 
 @Gtk.Template(string=load_ui("library.ui"))
@@ -83,7 +84,10 @@ class Library(Gtk.Viewport):
         GLib.idle_add(self.__create_gametiles)
 
         # Get games from the API
-        self.__add_games_from_api()
+        installedGameIds = []
+        for game in self.games:
+            installedGameIds.append(game.id)
+        self.__add_games_from_api(skip_platform_check=installedGameIds)
         GLib.idle_add(self.__create_gametiles)
         GLib.idle_add(self.filter_library)
 
@@ -130,11 +134,11 @@ class Library(Gtk.Viewport):
 
     def __create_gametiles(self) -> None:
         """Gets called twice: Once for installed, once for not installed games."""
-        games_with_tiles = []
+        games_with_tiles = {}
         for child in self.flowbox.get_children():
             tile = child.get_children()[0]
             if tile.game in self.games:
-                games_with_tiles.append(tile.game)
+                games_with_tiles[tile.game.id] = tile.game
                 """Games which already have a tile during the second invocation are installed games.
                 These did NOT have api information about the thumbnail url in their Game instance in the first pass.
                 Thus, they weren't able to load the thumbnail if it wasn't cached before. Try again now.
@@ -146,11 +150,9 @@ class Library(Gtk.Viewport):
         for game in self.games:
             if game in games_with_tiles:
                 continue
-            if game.is_installed():
+            if update_supported_platforms(game, self.config):
                 self.__add_gametile(game)
             elif game.id in self.config.current_downloads:
-                self.__add_gametile(game)
-            elif game.platform in self.config.platform_mode:
                 self.__add_gametile(game)
             else:
                 # housekeeping: API.get_library returns all owned games
@@ -214,8 +216,13 @@ class Library(Gtk.Viewport):
 
         return games
 
-    def __add_games_from_api(self):
-        retrieved_games, err_msg = self.api.get_library()
+    def __add_games_from_api(self, skip_platform_check=[]):
+        """
+        Pull data from GOG library API.
+        The parameter 'skip_platform_check' will simply be passed through.
+        It'll be used by 'api.get_library()' internally to prevent requesting detailed information for installed games
+        """
+        retrieved_games, err_msg = self.api.get_library(skip_platform_check=skip_platform_check)
         if not err_msg:
             self.offline = False
         else:
@@ -232,6 +239,7 @@ class Library(Gtk.Viewport):
             if game not in self.games:
                 self.games.append(game)
 
+            # this updates the local instance of Game with data retrieved from remote
             local_game = self.games[self.games.index(game)]
             # update the local Game instance with data retrieved from remote, but only when both are not the same instance
             _update_gameinfo(local_game, game, game_category_dict)

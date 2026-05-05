@@ -1,17 +1,19 @@
 import http
 import logging
-import time
-from urllib.parse import urlencode
+import os
 import requests
+import time
 import xml.etree.ElementTree as ET
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from requests import Session
+from urllib.parse import urlencode
 
+from minigalaxy.config import Config
+from minigalaxy.constants import IGNORE_GAME_IDS
 from minigalaxy.file_info import FileInfo
 from minigalaxy.game import Game
-from minigalaxy.constants import IGNORE_GAME_IDS
-from minigalaxy.config import Config
+from minigalaxy.translation import _
 
 
 class NoDownloadLinkFound(BaseException):
@@ -26,6 +28,7 @@ class Api:
         self.redirect_uri = "https://embed.gog.com/on_login_success?origin=client"
         self.client_id = "46899977096215655"
         self.client_secret = "9d85c43b1482497dbbce61f6e4aa173a433796eeae2ca8c5f6129f2dc4de46d9"
+        self.debug = os.environ.get("MG_DEBUG")
         self.active_token = False
         self.active_token_expiration_time = time.time()
         self.conn_check_thpool = ThreadPoolExecutor(max_workers=2)
@@ -76,57 +79,96 @@ class Api:
             refresh_token = ""
         return refresh_token
 
-    # Get all Linux games in the library of the user. Ignore other platforms and movies
-    def get_library(self):
+    def get_library(self, skip_platform_check=[]):
+        """
+        Get all Linux games in the library of the user. Ignore movies.
+        Generally tries to get everything that can run on linux or window.
+        One problem of the api used:
+        * embed.gog.com/account/getFilteredProducts[worksOn][Linux] as well as
+        * api.gog.com/products[content_system_compatibility]
+        are wrong sometimes and don't contain linux=true, although there actually IS a linux version.
+        In these situations, extended product info is pulled and the listed installer downloads will be checked.
+        The parameter skip_platform_check is used in this context to prevent doing this for games which are
+        installed already.
+
+        This method basically doesn't trust the flag linux=false without double-checking another API.
+        """
         err_msg = ""
-        games = []
-        if self.active_token:
-            current_page = 1
-            all_pages_processed = False
-            url = "https://embed.gog.com/account/getFilteredProducts"
-
-            while not all_pages_processed:
-                params = {
-                    'mediaType': 1,  # 1 means game
-                    'page': current_page,
-                }
-                response = self.__request(url, params=params)
-                if "totalPages" not in response:
-                    err_msg = "Couldn't load game library"
-                    return games, err_msg
-                total_pages = response["totalPages"]
-
-                self.__parse_productlist_json(response["products"], games)
-
-                if current_page == total_pages:
-                    all_pages_processed = True
-                current_page += 1
-        else:
+        if not self.active_token:
             err_msg = "Couldn't connect to GOG servers"
-        return games, err_msg
+            return [], err_msg
 
-    def __parse_productlist_json(self, product_list, game_list):
+        current_page = 0
+        total_pages = 1
+        url = "https://embed.gog.com/account/getFilteredProducts"
+
+        games_by_id = {}
+        requires_extended_data = set()
+
+        while current_page < total_pages:
+            current_page += 1
+            params = {
+                'mediaType': 1,  # 1 means game
+                'page': current_page,
+            }
+            response = self.__request(url, params=params)
+            if "totalPages" not in response:
+                err_msg = _("Couldn't load complete game library. Stopped at page {} of {}".format(current_page, total_pages))
+                break
+            total_pages = response["totalPages"]
+
+            self.__parse_productlist_json(response["products"], games_by_id, requires_extended_data, skip_platform_check)
+
+        self._update_games_by_productinfo(games_by_id, list(requires_extended_data))
+
+        return games_by_id.values(), err_msg
+
+    def __parse_productlist_json(self, product_list, games_by_id, requires_extended_data, skip_platform_check):
         for product in product_list:
             if product["id"] in IGNORE_GAME_IDS:
                 continue
 
             worksOn = product.get("worksOn", {})
-            platform = None
+            platforms = []
             if worksOn.get("Linux", False):
-                platform = "linux"
+                platforms.append("linux")
+            elif product["id"] not in skip_platform_check:
+                requires_extended_data.add(product["id"])
             elif worksOn.get("Windows", False):
-                platform = "windows"
+                platforms.append("windows")
 
-            if not platform:
-                logging.warn("%s has no platform information - skip", product["title"])
-                continue
+            if not platforms:
+                logging.warn("%s has no platform information - try another API", product["title"])
+                requires_extended_data.add(product["id"])
 
             if not product.get("url", None):
                 logging.warning("%s (%s) has no store page url", product["title"], product['id'])
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
-                        image_url=product["image"], platform=platform, category=product["category"])
-            game_list.append(game)
+                        image_url=product["image"], platform=platforms, category=product["category"])
+            games_by_id[game.id] = game
+
+    def _update_games_by_productinfo(self, game_dict, update_list):
+        productsUrl = "https://api.gog.com/products?expand=downloads&ids="
+        processed = 0
+        while processed < len(update_list):
+            section = update_list[processed:(processed+50)]
+            productData = self.__request(f'{productsUrl}{",".join(str(gameid) for gameid in section)}')
+
+            for product in productData:
+                game = game_dict.get(product['id'])
+                game.platform = self._platforms_by_installer(product)
+            processed += 50
+
+    def _platforms_by_installer(self, product):
+        installer_list = product['downloads']['installers']
+        platforms = set()
+        for installer in installer_list:
+            if 'linux' in installer['id']:
+                platforms.add('linux')
+            if 'windows' in installer['id']:
+                platforms.add('windows')
+        return list(platforms)
 
     def get_owned_products_ids(self):
         if not self.active_token:
@@ -240,8 +282,8 @@ class Api:
                               response.status_code, response.text, exc_info=1)
         except requests.exceptions.RequestException:
             logging.error("Couldn't read xml data. Received RequestException", exc_info=1)
-        finally:
-            return result
+
+        return result
 
     def get_user_info(self) -> str:
         username = self.config.username

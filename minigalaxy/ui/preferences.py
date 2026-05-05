@@ -52,6 +52,9 @@ class Preferences(Gtk.Dialog):
             _("Keep installers after downloading a game.\nInstallers are stored in: {}").format(installer_dir)
         )
 
+        # used to make sure `window.reset_library` is only called once per `save`, as it is an expensive operation
+        self.requires_reset_library = False
+
     def __set_locale_list(self) -> None:
         # Set the active option
         current_locale = self.config.locale
@@ -80,8 +83,7 @@ class Preferences(Gtk.Dialog):
 
     def __apply_view_choice(self) -> None:
         view = get_combo_value(self.combobox_view)
-        if view != self.config.view:
-            self.parent.reset_library()
+        self.requires_reset_library = view != self.config.view
         self.config.view = view
 
     def __apply_theme_choice(self) -> None:
@@ -95,7 +97,7 @@ class Preferences(Gtk.Dialog):
         if new_mode == self.config._raw_platform_mode():
             return
         self.config.platform_mode = new_mode
-        self.parent.reset_library()
+        self.requires_reset_library = True
         if "windows" in new_mode and not shutil.which("wine"):
             self.parent.show_error(_("Wine wasn't found. Windows games will be shown but not be installable."))
 
@@ -132,36 +134,40 @@ class Preferences(Gtk.Dialog):
     def save_pressed(self, button):
         save_changes = True
         try:
-            self.config.start_batch_edit()
+            config = self.config
+            config.start_batch_edit()
 
             self.__apply_locale_choice()
             self.config.lang = get_combo_value(self.combobox_language)
             self.__apply_view_choice()
             self.__apply_theme_choice()
-            self.config.keep_installers = self.switch_keep_installers.get_active()
-            self.config.stay_logged_in = self.switch_stay_logged_in.get_active()
-            self.config.show_hidden_games = self.switch_show_hidden_games.get_active()
-            self.config.create_applications_file = self.switch_create_applications_file.get_active()
+            config.keep_installers = self.switch_keep_installers.get_active()
+            config.stay_logged_in = self.switch_stay_logged_in.get_active()
+            config.show_hidden_games = self.switch_show_hidden_games.get_active()
+            config.create_applications_file = self.switch_create_applications_file.get_active()
             self.parent.library.filter_library()
 
             self.__apply_platform_mode()
 
             # Only change the install_dir is it was actually changed
-            if self.button_file_chooser.get_filename() != self.config.install_dir:
+            if self.button_file_chooser.get_filename() != config.install_dir:
                 if self.__save_install_dir_choice():
                     self.download_manager.cancel_all_downloads()
-                    self.parent.reset_library()
+                    self.requires_reset_library = True
                 else:
                     self.parent.show_error(_("{} isn't a usable path").format(self.button_file_chooser.get_filename()))
 
         except Exception as e:
             logging.error("Could not save preferences", exc_info=1)
-            self.config.cancel_batch_edit()
+            config.cancel_batch_edit()
             save_changes = False
             self.parent.show_error(_("There was an error while saving preferences."), str(e))
 
         if save_changes:
-            self.config.save()
+            config.save()
+
+        if self.requires_reset_library:
+            self.parent.reset_library()
 
         self.destroy()
 

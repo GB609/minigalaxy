@@ -11,6 +11,7 @@ import time
 
 from collections import deque
 from enum import Enum, auto
+from glob import glob
 from queue import Empty
 from threading import Thread, RLock
 from importlib.resources import as_file
@@ -591,6 +592,36 @@ class InstallerInventory:
         self.inventory_file = None
         if installer_path:
             self.set_path_once(installer_path)
+    
+    @staticmethod
+    def detect_platform_type(installer_dir):
+        """
+        Try to determine the platform type of installer files contained in the given directory.
+        The same directory currently shouldn't mix several platforms.
+        """
+
+        if not os.path.isdir(installer_dir):
+            return None
+
+        if glob(installer_dir + "/*.sh"):
+            return "linux"
+
+        if glob(installer_dir + "/*.exe") or glob(installer_dir + "/*.bin"):
+            return "windows"
+
+        # Arriving here means that there can only be InstallerInventory json files, without any partial files.
+        # This can happen when several games are queued for downloading. 
+        # The json file is created as soon as LibraryEntry is passing the list of downloads to DownloadManager,
+        # but the files will only be created once DownloadManager assign them to active download slots.
+        for json_file in glob(installer_dir + "/*.json"):
+            inventory = InstallerInventory()
+            inventory.directory = installer_dir
+            inventory.inventory_file = json_file
+            inventory.load()
+            # pick platform type of the first file found
+            return inventory.get_platform_type()
+
+        return None
 
     @staticmethod
     def from_file_system(installer_path):
@@ -669,6 +700,19 @@ class InstallerInventory:
         for file_data in self.data.values():
             total_size += file_data.get('size', 0)
         return total_size
+
+    def get_platform_type(self):
+        """
+        Similar to InstallerInventory.detect_platform_type, 
+        but based on the contents of the Inventory instance instead of the file system.
+        """
+        files = self.contained_files()
+        if filter(lambda n: n.endswith(".sh"), files):
+            return "linux"
+        if filter(lambda n: n.endswith(".exe") or n.endswith(".bin"), files):
+            return "windows"
+
+        return None
 
     def is_complete(self):
         self.load()

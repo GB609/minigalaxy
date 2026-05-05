@@ -209,6 +209,11 @@ class Config:
         return self.__config.get("platform_mode", "linux")
 
     @property
+    def preferred_platform(self):
+        """Not a full settings - it only exists as a convenient shortcut for 'Config.platform_mode[0]'"""
+        return self.platform_mode[0]
+
+    @property
     def keep_window_maximized(self) -> bool:
         return self.__config.get("keep_window_maximized", False)
 

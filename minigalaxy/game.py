@@ -1,9 +1,10 @@
+import json
 import logging
 import os
 import re
-import json
 
 from enum import Enum
+from minigalaxy.config import Config
 from minigalaxy.paths import CONFIG_GAMES_DIR, ICON_DIR, THUMBNAIL_DIR
 
 
@@ -13,8 +14,10 @@ class InfoKey(str, Enum):
     CHECK_UPDATES = "check_for_updates"
     COMMAND = "command"
     CUSTOM_WINE = "custom_wine"
+    GOG_PLATFORMS = "gog_platforms"
     HIDE_GAME = "hide_game"
     MANGOHUD = "use_mangohud"
+    PLATFORM_CHOICE = "platform_choice"
     SHOW_FPS = "show_fps"
     GAMEMODE = "use_gamemode"
     VARIABLES = "variable"
@@ -39,6 +42,83 @@ class Game:
     def get_stripped_name(self, to_path=False):
         return Game.strip_string(self.name, to_path=to_path)
 
+    @property
+    def platform(self):
+        """
+        A game may support multiple platforms on GOG. There are places in the code where a distinction between
+        a 'current' platform and all supported platforms is required.
+        This is what this getter/property does - it provides the _current_ platform (selection) for a game.
+        Current means:
+        - It is installed OR
+        - It is about to be installed and the target platform needs to be picked
+
+        The logic backing it goes through a few cases:
+        - When the game only supports one platform in the first place, return it.
+          Note: An installed game is treated as supporting only the installed platform, regardless of what GOG says.
+        - In case the game supports multiple platforms, the value of get_info(InfoKey.PLATFORM_CHOICE) is used (if any)
+
+        **Note**
+        This getter is mainly intended for UI purposes, because it can't provide one crucial information:
+        The 'default' platform choice from preferences. This applies when a game supports multiple platforms,
+        but the user has NOT picked which to install (=get_info(PLATFORM_CHOICE) is None).
+        Since there is no singleton instance of 'Config', the default can not be retrieved by this getter automatically.
+
+        Use 'Game.get_chosen_platform(config)' in that situation and (if required) update the game info.
+        """
+        return self.get_chosen_platform()
+
+    @platform.setter
+    def platform(self, platform_value):
+        self.__platform = platform_value
+
+    def get_chosen_platform(self, config=None):
+        """
+        A lot of games support multiple platforms. This method helps to determine which version to download.
+        It depends on 2 pieces of info:
+        - the type of Game.platform (list or string). As a list, it can currently only contain 'linux' and/or 'windows'
+        - a game info flag 'platform_choice'. Set when a download is started to make sure it is correctly
+          restarted on resume after MG restart
+
+        Rules:
+        1. When Game.platform is a string or list of size 1, take it. There is no other option.
+        2. Check if 'platform_choice' was set and return it if yes
+        3. If no choice was made and no Config instance given, return None
+           Callers should then use Config.preferred_platform if applicable or throw an error otherwise
+        4. If an instance of Config was given, default back to config.preferred_platform
+        5. 'platform_choice' and 'preferred_platform' are subject to an additional check whether the
+           game actually supports the given value. This guards against manual file edits in the game-info.json.
+        """
+        plf = self.__platform
+        if isinstance(plf, str):
+            return plf
+
+        if isinstance(plf, list) and len(plf) == 1:
+            return plf[0]
+
+        plf = self.get_info(InfoKey.PLATFORM_CHOICE, None)
+        if not plf and isinstance(config, Config):
+            plf = config.preferred_platform
+
+        if plf not in self.supported_platforms():
+            logging.error("%s does not support platform %s", self.name, plf)
+            return None
+
+        return plf
+
+    def is_singular_platform(self, platform):
+        if isinstance(self.__platform, str) or (isinstance(self.__platform, list) and len(self.__platform) == 1):
+            return platform in self.__platform
+
+        return False
+
+    def supports_multiple_platforms(self):
+        return isinstance(self.__platform, list) and len(self.__platform) > 1
+
+    def supported_platforms(self):
+        if isinstance(self.__platform, str):
+            return [self.__platform]
+        return [*self.__platform]
+
     def get_install_directory_name(self):
         return Game.strip_string(self.name, to_path=True)
 
@@ -55,8 +135,8 @@ class Game:
         2. To find the actually existing file
         Looks in 2 locations:
         - game.install_dir: When game is installed and file exists.
-          use_fallback=False enforces returning this path even when the file
-          does not exist. But the game must still be installed.
+          use_fallback=False enforces returning this path even when the file does not exist.
+          But the game must still be installed.
         - global thumbnail dir as denoted by minigalaxy.paths.THUMBNAIL_DIR
         """
 
@@ -241,7 +321,8 @@ class Game:
             game_id={self.id},
             install_dir="{self.install_dir}",
             image_url="{self.image_url}",
-            platform="{self.platform}",
+            chosen_platform="{self.platform}",
+            supported_platforms="${self.supported_platforms()}",
             dlcs={self.dlcs},
             category="{self.category}"
         )'''

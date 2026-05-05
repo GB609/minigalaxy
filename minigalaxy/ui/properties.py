@@ -141,7 +141,7 @@ class Properties(Gtk.Dialog):
             self.entry_properties_variable.set_sensitive(False)
             self.entry_properties_command.set_sensitive(False)
 
-        if game.platform == 'linux':
+        if game.get_chosen_platform(self.config) == 'linux':
             self.button_properties_regedit.hide()
             self.button_properties_winecfg.hide()
             self.button_properties_winetricks.hide()

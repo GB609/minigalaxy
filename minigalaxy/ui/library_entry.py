@@ -5,6 +5,7 @@ import shutil
 import threading
 import urllib.parse
 
+from minigalaxy import platforms
 from minigalaxy.api import NoDownloadLinkFound
 from minigalaxy.download import CombinedProgressWatcher, Download, DownloadType
 from minigalaxy.download_manager import DownloadState
@@ -14,6 +15,7 @@ from minigalaxy.installer import uninstall_game, enqueue_game_install, check_dis
     InstallerInventory, InstallResult, InstallResultType
 from minigalaxy.launcher import start_game
 from minigalaxy.paths import CACHE_DIR, DOWNLOAD_DIR, THUMBNAIL_DIR
+from minigalaxy.platforms import update_supported_platforms
 from minigalaxy.translation import _
 from minigalaxy.ui.gtk import Gtk, GLib, Notify
 from minigalaxy.ui.information import Information
@@ -176,28 +178,41 @@ class LibraryEntry:
         download_thread.start()
 
     def get_keep_executable_path(self):
-        keep_path = ""
+        if not os.path.isdir(self.keep_path):
+            return ""
+
         exes_by_creation_date = {}
-        if os.path.isdir(self.keep_path):
-            for dir_content in os.listdir(self.keep_path):
-                kept_file = os.path.join(self.keep_path, dir_content)
-                if LibraryEntry.is_executable(kept_file):
-                    exes_by_creation_date[int(os.path.getmtime(kept_file))] = kept_file
+        for dir_content in os.listdir(self.keep_path):
+            kept_file = os.path.join(self.keep_path, dir_content)
+            if LibraryEntry.is_executable(kept_file):
+                exes_by_creation_date[int(os.path.getmtime(kept_file))] = kept_file
 
-        if exes_by_creation_date:
-            ctimes_sorted = [*exes_by_creation_date.keys()]
-            ctimes_sorted.sort()
-            for creation_time in ctimes_sorted:
-                installer = exes_by_creation_date[creation_time]
-                inventory = InstallerInventory(installer)
-                if inventory.is_complete():
-                    return installer
+        if not exes_by_creation_date:
+            return ""
 
-        return keep_path
+        ctimes_sorted = [*exes_by_creation_date.keys()]
+        ctimes_sorted.sort()
+        for creation_time in ctimes_sorted:
+            installer = exes_by_creation_date[creation_time]
+            inventory = InstallerInventory(installer)
+            if inventory.is_complete():
+                return installer
+
+        return ""
 
     @staticmethod
     def is_executable(file):
         return os.path.isfile(file) and (os.access(file, os.X_OK) or os.path.splitext(file)[-1] in [".exe", ".sh"])
+
+    def update_platform_choice(self, new_platform_value):
+        """Triggered by clicking on the platform icon shown over the game's thumbnail."""
+        if not self.game.supports_multiple_platforms():
+            return
+
+        current_download_dir = self.__determine_download_dir({"name": self.game.name})
+        platforms.handle_platform_switch(self.game, new_platform_value, current_download_dir, self.config)
+
+        self.reload_state()
 
     def get_download_info(self, platform="linux"):
         try:
@@ -216,7 +231,19 @@ class LibraryEntry:
 
     def __download_game(self) -> None:
         finish_func = self.__install_game
-        result, download_info = self.get_download_info(self.game.platform)
+
+        platform = self.game.get_chosen_platform(self.config)
+        if not platform:
+            logging.error("No platform chosen for Game: %s", self.game)
+            GLib.idle_add(self.parent_window.show_information, _("Download error"),
+                          _("No supported platform found for '{}'".format(self.game.name)))
+            return
+
+        # update the currently chosen platform to ensure it is set correctly for installation
+        self.game.set_info(InfoKey.GOG_PLATFORMS, self.game.supported_platforms())
+        self.game.set_info(InfoKey.PLATFORM_CHOICE, platform)
+
+        result, download_info = self.get_download_info(platform)
         if result:
             self._download(InstallableItem(self.game.id, self.game.name), download_info, DownloadType.GAME, finish_func)
 
@@ -458,7 +485,13 @@ class LibraryEntry:
 
     def __uninstall_game(self):
         self.update_to_state(State.UNINSTALLING)
+        # we need to go from the fixed installed platform to the current list of supported/allowed
+        # this is saved for installed games in info, thus get it BEFORE uninstall because that wipes info
+        self.game.platform = self.game.get_info(InfoKey.GOG_PLATFORMS)
         uninstall_game(self.game)
+        # Now adjust/recalculate the supported platforms. This is normally done during full library reload
+        # which would be too expensive to do just to fix the state of one uninstalled game
+        update_supported_platforms(self.game, self.config)
         self.update_to_state(State.DOWNLOADABLE)
         GLib.idle_add(self.reload_state)
 
@@ -682,6 +715,7 @@ class LibraryEntry:
         self.update_visible_widgets(self.menu_button_uninstall, info_buttons=True)
 
         self.game.set_install_dir(self.config.install_dir)
+        self.game.platform = self.game.get_chosen_platform(self.config)
 
     def state_uninstalling(self):
         self.set_main_button(False, _("Uninstalling…"))

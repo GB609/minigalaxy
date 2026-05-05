@@ -1,6 +1,6 @@
 from gi.repository import Gdk
 from minigalaxy.entity.state import State
-from minigalaxy.game import Game
+from minigalaxy.game import Game, InfoKey
 from minigalaxy.resources import platform_name_to_icon_file
 from minigalaxy.ui.gtk import Gtk, load_ui, load_scaled_pixbuf
 
@@ -42,22 +42,23 @@ class GameIconBar(Gtk.Box):
         """
         Used to change/override platform selection where supported.
         Only works if clicking on an icon would make sense (there are multiple choices).
-
-        FIXME: The current implementation is commented out party because the required background logic
-        for platform change is not complete yet.
         """
         if not self.clickable or event.type != event.type == Gdk.EventType.BUTTON_PRESS:
             return
 
-        """
         new_selection = self.update_selected_icon(icon.get_name())
         self.parent_gametile.update_platform_choice(new_selection)
-        """
 
     def update_icon_state(self, game_state):
+        if self.game.is_singular_platform(self.config.preferred_platform):
+            # hide all icons when the only supported platform is the primary one
+            supported_platforms = []
+        else:
+            supported_platforms = self.game.supported_platforms()
+
         for icon in [self.lnx_icon, self.wine_icon]:
             # the icon GtkImage.name property is used to link the instances to the platform they represent
-            if icon.get_name() == self.game.platform:
+            if icon.get_name() in supported_platforms:
                 icon.show()
             else:
                 icon.hide()
@@ -67,6 +68,14 @@ class GameIconBar(Gtk.Box):
             self.update_icon.show()
         else:
             self.update_icon.hide()
+
+        if self.game.is_installed():
+            self.clickable = False
+            return
+        else:
+            self.update_selected_icon(self.game.get_info(InfoKey.PLATFORM_CHOICE))
+
+        self.clickable = self.game.supports_multiple_platforms() and self.__state_allows_change(game_state)
 
     def reset_selected_icons(self):
         """Deselects all platform icons. Useful for a fresh start of just the UI."""
@@ -93,3 +102,6 @@ class GameIconBar(Gtk.Box):
         icon_file = platform_name_to_icon_file(platform)
         pixbuf = load_scaled_pixbuf(icon_file, Gtk.IconSize.lookup(Gtk.IconSize.SMALL_TOOLBAR)[1])
         icon_holder.set_from_pixbuf(pixbuf)
+
+    def __state_allows_change(self, state):
+        return state in [State.INSTALLABLE, State.DOWNLOADABLE]

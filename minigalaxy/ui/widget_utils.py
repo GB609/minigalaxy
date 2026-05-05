@@ -29,6 +29,24 @@ def populate_combobox(combo: Gtk.ComboBox, str_tuple_list, active_value: str):
             break
 
 
+def get_value(widget):
+    """
+    Return the effective value represented by a widget's current state.
+    The type of value and how it is retrieved depends on the widget type:
+    - ComboBox will be the key strings of their model (structure as for 'populate_combobox',
+      retrieved from the current selection. No selection results in 'None'
+    - FileChooser result in strings
+    - Switch yields bools
+    """
+    if isinstance(widget, Gtk.Switch):
+        return widget.get_active()
+    elif isinstance(widget, Gtk.FileChooser):
+        return widget.get_filename()
+    elif isinstance(widget, Gtk.ComboBox):
+        return get_combo_value(widget)
+    raise TypeError(f"{type(widget)} is not (yet) supported by get_value")
+
+
 def get_combo_value(combo):
     """Return key string of the currently selected entry in ComboBox. Expects same structure as 'populate_combobox'"""
     selected_index = combo.get_active_iter()
