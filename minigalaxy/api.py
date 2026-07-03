@@ -80,29 +80,30 @@ class Api:
     def get_library(self):
         err_msg = ""
         games = []
-        if self.active_token:
-            current_page = 1
-            all_pages_processed = False
-            url = "https://embed.gog.com/account/getFilteredProducts"
+        if not self.active_token:
+            return [], "Couldn't connect to GOG servers"
 
-            while not all_pages_processed:
-                params = {
-                    'mediaType': 1,  # 1 means game
-                    'page': current_page,
-                }
-                response = self.__request(url, params=params)
-                if "totalPages" not in response:
-                    err_msg = "Couldn't load game library"
-                    return games, err_msg
-                total_pages = response["totalPages"]
+        current_page = 1
+        all_pages_processed = False
+        url = "https://embed.gog.com/account/getFilteredProducts"
 
-                self.__parse_productlist_json(response["products"], games)
+        while not all_pages_processed:
+            params = {
+                'mediaType': 1,  # 1 means game
+                'page': current_page,
+            }
+            response = self.__request(url, params=params)
+            if "totalPages" not in response:
+                err_msg = "Couldn't load game library"
+                return games, err_msg
+            total_pages = response["totalPages"]
 
-                if current_page == total_pages:
-                    all_pages_processed = True
-                current_page += 1
-        else:
-            err_msg = "Couldn't connect to GOG servers"
+            self.__parse_productlist_json(response["products"], games)
+
+            if current_page == total_pages:
+                all_pages_processed = True
+            current_page += 1
+
         return games, err_msg
 
     def __parse_productlist_json(self, product_list, game_list):
