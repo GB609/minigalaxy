@@ -215,6 +215,7 @@ class Library(Gtk.Viewport):
         return games
 
     def __add_games_from_api(self):
+        logging.info("Start retrieving owned games from the api...")
         retrieved_games, err_msg = self.api.get_library()
         if not err_msg:
             self.offline = False
@@ -223,6 +224,7 @@ class Library(Gtk.Viewport):
             logging.info("Client is offline, showing installed games only")
             GLib.idle_add(self.parent_window.show_error, _("Failed to retrieve library"), _(err_msg))
         game_category_dict = {}
+        logging.info("Create or update the game list with %s games", len(retrieved_games))
         for game in retrieved_games:
             # NOTE: the 'in' check and 'list.index' function depend on the '__eq__' method of Game.
             # 'Game.__eq__(self, other)' is a bit lenient, it ignores the property 'id' if it is zero for 'self' or 'other'.
