@@ -19,6 +19,8 @@ class NoDownloadLinkFound(BaseException):
 
 
 class Api:
+    PRODUCTS_API = "https://api.gog.com/products"
+
     def __init__(self, config: Config, session: Session):
         self.config = config
         self.session = session
@@ -155,8 +157,8 @@ class Api:
 
     # Get Extrainfo about a game
     def get_info(self, game: Game) -> dict:
-        request_url = "https://api.gog.com/products/{}?locale=en-US&expand=downloads,expanded_dlcs,description,screenshots," \
-                      "videos,related_products,changelog".format(str(game.id))
+        request_url = "{}/{}?locale=en-US&expand=downloads,expanded_dlcs,description,screenshots," \
+                      "videos".format(self.PRODUCTS_API, str(game.id))
         response = self.__request(request_url)
         return response
 
