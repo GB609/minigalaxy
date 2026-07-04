@@ -90,10 +90,15 @@ class TestApiGog(TestCase):
 
     def test_get_library_ok(self):
         self.api.active_token = True
-        response_dict = {'totalPages': 1, 'products': [{'id': 1097893768, 'title': 'Neverwinter Nights: Enhanced Edition', 'image': '//images-2.gog-statics.com/8706f7fb87a4a41bc34254f3b49f59f96cf13d067b2c8bbfd8d41c327392052a', 'url': '/game/neverwinter_nights_enhanced_edition_pack', 'worksOn': {'Windows': True, 'Mac': True, 'Linux': True}, "category": "Role-playing"}]}
+        api_responses = [
+            # for getFilteredProducts
+            {'totalPages': 1, 'products': [{'id': 1097893768, 'title': 'Neverwinter Nights: Enhanced Edition', 'image': '//images-2.gog-statics.com/8706f7fb87a4a41bc34254f3b49f59f96cf13d067b2c8bbfd8d41c327392052a', 'url': '/game/neverwinter_nights_enhanced_edition_pack', 'worksOn': {'Windows': True, 'Mac': True, 'Linux': True}, "category": "Role-playing"}]},
+            # for api.gog.com/products
+            [{'id': 1097893768, 'content_system_compatibility': {'windows': True}}]
+        ]
         self.api.active_token_expiration_time = time.time() + 10.0
         response_mock = MagicMock()
-        response_mock.json.return_value = response_dict
+        response_mock.json.side_effect = lambda: api_responses.pop(0)
         self.session.get.return_value = response_mock
         self.session.get().status_code = http.HTTPStatus.OK
         exp = "Neverwinter Nights: Enhanced Edition"
@@ -113,12 +118,13 @@ class TestApiGog(TestCase):
 
     def test_parse_productlist_json(self):
         products = [
-            {"id": 2, "title": "Should not be included", "image": ""},
-            {"id": 12, "worksOn": {}, "title": "Should not be included", "image": "", "category": ""},
-            {"id": 22, "worksOn": {"Linux": True, "Windows": False}, "title": "Pure Linux Game", "image": "", "category": ""},
-            {"id": 32, "worksOn": {"Linux": False, "Windows": True}, "title": "Pure Windows Game", "image": "", "category": ""},
-            {"id": 42, "worksOn": {"Linux": True, "Windows": True}, "title": "Mixed Game", "image": "", "category": ""}
+            {"id": 22, "title": "Pure Linux Game", "image": "", "category": ""},
+            {"id": 32, "title": "Pure Windows Game", "image": "", "category": ""},
+            {"id": 42, "title": "Mixed Game", "image": "", "category": ""}
         ]
+        # FIXME: platform is not part of the __eq__ check in game, so this test only made sense when
+        # __parse_productlist_json used the 'worksOn' subdict to filter out unsupported games
+        # (not the case anymore, this is done later)
         expected = [
             Game(name="Pure Linux Game", game_id=22, platform="linux"),
             Game(name="Pure Windows Game", game_id=32, platform="window"),
