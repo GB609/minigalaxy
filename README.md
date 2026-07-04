@@ -25,6 +25,16 @@ In addition to that, Minigalaxy also allows you to:
 - Use the system's ScummVM or DOSBox installation
 - Install Windows games using Wine
 
+### **Important:** GOG compatibility
+GOG has changed some of their API responses around May-July 2026 (exact point in time not known).
+
+This required to change how Minigalaxy retrieves some pieces of data.
+
+Any version of Minigalaxy from before the date mentioned above will NOT be able to show and install all 
+linux and windows games correctly.
+
+The first release working with the new APIs will be **1.4.2**.
+
 ### Backwards compatibility
 Minigalaxy version 1.3.2 and higher change some aspects of windows game installations through wine.
 It will try to adapt already installed games to the new concept when launched through Minigalaxy.
