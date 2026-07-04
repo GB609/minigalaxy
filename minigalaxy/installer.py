@@ -289,7 +289,7 @@ def extract_by_wine(game, installer, game_lang, config=Config()):
 
 
 def try_wine_command(command_arr):
-    logging.debug('trying to run wine command:', shlex.join(command_arr))
+    logging.debug('trying to run wine command:[%s]', shlex.join(command_arr))
     stdout, stderr, exitcode = _exe_cmd(command_arr, True)
     if exitcode not in [0]:
         logging.error(stderr)
