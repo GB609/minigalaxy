@@ -168,6 +168,18 @@ class Api:
         if compat.get("windows", False):
             return "windows"
 
+        # content_system_compatibility is not correct sometimes,
+        # see Goodbye Eternity for example: https://api.gog.com/products/1424453125?expand=downloads,expanded_dlcs
+        # as a fallback, iterate over the installers and pull the OS info from there
+        os_support = {}
+        for installer in product["downloads"]["installer"]:
+            if 'os' in installer:
+                os_support[installer['os']] = True
+        if os_support.get("linux", False):
+            return "linux"
+        if os_support.get("windows", False):
+            return "windows"
+
         logging.warning("%s has no platform information - skip", product["title"])
         return None
 
