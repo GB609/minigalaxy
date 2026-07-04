@@ -157,9 +157,13 @@ class Api:
 
     # Get Extrainfo about a game
     def get_info(self, game: Game) -> dict:
-        request_url = "{}/{}?locale=en-US&expand=downloads,expanded_dlcs,description,screenshots," \
-                      "videos".format(self.PRODUCTS_API, str(game.id))
+        if game.product_info and game.product_info_age < 60:
+            logging.debug("Reusing cached result for api.get_info(%s)", game.name)
+            return game.product_info
+
+        request_url = "{}/{}?locale=en-US&expand=downloads,expanded_dlcs".format(self.PRODUCTS_API, str(game.id))
         response = self.__request(request_url)
+        game.product_info = response
         return response
 
     def get_dlc_info(self, game: Game, dlc_id):

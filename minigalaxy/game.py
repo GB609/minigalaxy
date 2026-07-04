@@ -1,10 +1,11 @@
+import json
 import logging
 import os
 import re
-import json
 
 from enum import Enum
 from minigalaxy.paths import CONFIG_GAMES_DIR, ICON_DIR, THUMBNAIL_DIR
+from time import monotonic
 
 
 class InfoKey(str, Enum):
@@ -36,6 +37,7 @@ class Game:
         self.dlcs = [] if dlcs is None else dlcs
         self.category = category
         self.status_file_path = self.get_status_file_path()
+        self.product_info = None
 
     def get_stripped_name(self, to_path=False):
         return Game.strip_string(self.name, to_path=to_path)
@@ -220,6 +222,21 @@ class Game:
         self.image_url = other_game.image_url
         self.url = other_game.url
         self.category = other_game.category
+
+    @property
+    def product_info(self) -> dict:
+        return self.__product_info
+
+    @product_info.setter
+    def product_info(self, product_info: dict) -> None:
+        self.__product_info = product_info
+        self.__product_info_settime = monotonic()
+
+    @property
+    def product_info_age(self):
+        """Time in minutes since the last update of product_info"""
+        current_time = monotonic()
+        return (current_time - self.__product_info_settime) / 60
 
     def __info_key_from_arg(self, key):
         """
