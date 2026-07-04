@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import threading
+import time
 
 from minigalaxy.api import Api
 from minigalaxy.config import Config
@@ -84,7 +85,12 @@ class Library(Gtk.Viewport):
 
         # Get games from the API
         self.__add_games_from_api()
-        GLib.idle_add(self.__create_gametiles)
+        index = 0
+        while index < len(self.games):
+            games_chunk = self.games[index:index+10]
+            GLib.idle_add(self.__create_gametiles, games_chunk)
+            index += 5
+            time.sleep(0.1)
         GLib.idle_add(self.filter_library)
 
     def __load_tile_states(self):
@@ -128,23 +134,17 @@ class Library(Gtk.Viewport):
         tile2 = child2.get_children()[0].game
         return tile2 < tile1
 
-    def __create_gametiles(self) -> None:
+    def __create_gametiles(self, games_to_add=[]) -> None:
         """Gets called twice: Once for installed, once for not installed games."""
-        games_with_tiles = []
-        for child in self.flowbox.get_children():
-            tile = child.get_children()[0]
-            if tile.game in self.games:
-                games_with_tiles.append(tile.game)
-                """Games which already have a tile during the second invocation are installed games.
-                These did NOT have api information about the thumbnail url in their Game instance in the first pass.
-                Thus, they weren't able to load the thumbnail if it wasn't cached before. Try again now.
-                This mostly applies when the user empties the cache. Otherwise THUMBNAIL dir should contain a file from
-                when the game still wasn't installed
-                """
-                tile.load_thumbnail()
 
-        for game in self.games:
-            if game in games_with_tiles:
+        if not games_to_add:
+            games_to_add = self.games
+
+        for game in games_to_add:
+            if game.library_tile:
+                # the game already has a visible entry in the library
+                # request to load the thumbnail, if there is a url for it and it hasnt been loaded before
+                game.library_tile.load_thumbnail()
                 continue
             if game.is_installed():
                 self.__add_gametile(game)
@@ -152,7 +152,7 @@ class Library(Gtk.Viewport):
                 self.__add_gametile(game)
             elif game.platform in self.config.platform_mode:
                 self.__add_gametile(game)
-            else:
+            elif game in self.games:
                 # housekeeping: API.get_library returns all owned games
                 # (useful when api-caching is introduced as the same request can be used independent of platform_mode)
                 # removing not shown games is only a small memory optimization
@@ -164,6 +164,7 @@ class Library(Gtk.Viewport):
             game_tile = GameTile(self, game)
         elif view == "list":
             game_tile = GameTileList(self, game)
+        game.library_tile = game_tile
 
         # Start download if Minigalaxy was closed while downloading this game
         game_tile.resume_download_if_expected()

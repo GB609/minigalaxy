@@ -38,6 +38,7 @@ class Game:
         self.category = category
         self.status_file_path = self.get_status_file_path()
         self.product_info = None
+        self.library_tile = None
 
     def get_stripped_name(self, to_path=False):
         return Game.strip_string(self.name, to_path=to_path)
