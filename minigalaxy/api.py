@@ -106,6 +106,8 @@ class Api:
                 all_pages_processed = True
             current_page += 1
 
+        games = self.__filter_games_with_valid_platforms(games)
+
         return games, err_msg
 
     def __parse_productlist_json(self, product_list, game_list):
@@ -113,23 +115,61 @@ class Api:
             if product["id"] in IGNORE_GAME_IDS:
                 continue
 
-            worksOn = product.get("worksOn", {})
-            platform = None
-            if worksOn.get("Linux", False):
-                platform = "linux"
-            elif worksOn.get("Windows", False):
-                platform = "windows"
-
-            if not platform:
-                logging.warning("%s has no platform information - skip", product["title"])
-                continue
-
             if not product.get("url", None):
                 logging.warning("%s (%s) has no store page url", product["title"], product['id'])
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
-                        image_url=product["image"], platform=platform, category=product["category"])
+                        image_url=product["image"], platform="windows", category=product["category"])
             game_list.append(game)
+
+    def __filter_games_with_valid_platforms(self, games):
+        """
+        Query the products api in batches of 50 and pull the supported platforms info out of there.
+        This will also assign the resulting product info to the game to cache it for further use by LibraryEntry.
+        """
+        # the additional platform check is only needed for games which are not installed
+        games_with_platform = []
+        for game in games:
+            if not game.is_installed():
+                games_with_platform.append(game)
+        games = games_with_platform
+        games_with_platform = []
+
+        while len(games) > 0:
+            chunk = {}
+            for game in games[:50]:
+                chunk[game.id] = game
+            games = games[50:]
+
+            id_query = ','.join(str(gameid) for gameid in chunk)
+            request_url = "{}?expand=downloads,expanded_dlcs&ids={}".format(self.PRODUCTS_API, id_query)
+            # returns a list at the top level
+            product_infos = self.__request(request_url)
+            if not product_infos or len(product_infos) < len(chunk):
+                logging.warning("The current batch of product infos does not contain all requested games.")
+
+            self.__upate_games_with_platform(games_with_platform, product_infos, chunk)
+        return games_with_platform
+
+    def __upate_games_with_platform(self, games_with_platform: list, product_infos: list, game_dict: dict):
+        for product in product_infos:
+            platform = self.__platform_from_product(product)
+            game = game_dict[product.get('id')]
+            if platform:
+                games_with_platform.append(game)
+                game.platform = platform
+                game.product_info = product
+
+    def __platform_from_product(self, product: dict):
+        """Expects a dictionary in the format provided by 'api.gog.com/products' """
+        compat = product.get("content_system_compatibility", {})
+        if compat.get("linux", False):
+            return "linux"
+        if compat.get("windows", False):
+            return "windows"
+
+        logging.warning("%s has no platform information - skip", product["title"])
+        return None
 
     def get_owned_products_ids(self):
         if not self.active_token:
