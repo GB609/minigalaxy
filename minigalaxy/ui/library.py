@@ -134,7 +134,7 @@ class Library(Gtk.Viewport):
         tile2 = child2.get_children()[0].game
         return tile2 < tile1
 
-    def __create_gametiles(self, games_to_add=[]) -> None:
+    def __create_gametiles(self, games_to_add=None) -> None:
         """Gets called twice: Once for installed, once for not installed games."""
 
         if not games_to_add:

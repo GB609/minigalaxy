@@ -168,7 +168,7 @@ class Api:
         # content_system_compatibility is not correct sometimes,
         # see Goodbye Eternity for example: https://api.gog.com/products/1424453125?expand=downloads,expanded_dlcs
         # as a fallback, iterate over the installers and pull the OS info from there
-        for installer in product["downloads"]["installer"]:
+        for installer in product["downloads"]["installers"]:
             if 'os' in installer:
                 compat[installer['os']] = True
         if compat.get("linux", False):
