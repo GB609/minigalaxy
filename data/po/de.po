@@ -9,7 +9,7 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-22 11:31+0200\n"
 "PO-Revision-Date: 2026-07-05 10:17+0000\n"
-"Last-Translator: Akin Yildiz <akin.yildiz@protonmail.com>\n"
+"Last-Translator: Anonymous <noreply@weblate.org>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/minigalaxy/"
 "glossary/de/>\n"
 "Language: de\n"
@@ -789,8 +789,7 @@ msgstr "Ob versteckte Spiele in der Bibliothek angezeigt werden oder nicht"
 #: minigalaxy/ui/data/preferences.ui:294
 msgctxt "create_menu_shortcuts_tooltip"
 msgid "Whether shortcuts are created for newly installed games or not"
-msgstr ""
-"Ob Verknüpfungen für neu installierte Spiele erstellt werden oder nicht"
+msgstr "Ob Verknüpfungen für neu installierte Spiele erstellt werden oder nicht"
 
 #: minigalaxy/ui/data/preferences.ui:308
 msgid "Which platforms to show and favor when installing games"
