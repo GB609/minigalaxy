@@ -33,7 +33,25 @@
   <provides>
     <binary>minigalaxy</binary>
   </provides>
-  <releases><release version="1.4.1" date="2026-01-22">
+  <releases><release version="1.4.2" date="2026-07-05">
+      <description>
+        <p>Implements the following changes:</p>
+        <ul>
+          <li>Critical bugfix: Use another API to determine game platform support (thanks to GB609)</li>
+          <li>UI improvement: Show games in the library incrementally when starting (thanks to GB609)</li>
+          <li>Reduce unnecessary writes to the config file. (thanks to GB609)</li>
+          <li>Fix a possible exception during game installation not being handled correctly.</li>
+          <li>Logs are now also written to `~/.cache/minigalaxy/minigalaxy.log`.</li>
+          <li>Ask the user which binary to launch if Minigalaxy is unsure.</li>
+          <li>The `wine` executable can now also be changed before a game is installed (thanks to GB609).</li>
+          <li>Resolve deprecation/syntax warnings and quiet test output noise. (thanks to slowsage)</li>
+          <li>Switch to using PEP 302 compliant resources, excluding translations. (thanks to EmperorArthur)</li>
+          <li>Allow installing Minigalaxy via pipx. (thanks to EmperorArthur)</li>
+          <li>Switch debian builds to using pybuild-plugin-pyproject. (thanks to EmperorArthur)</li>
+          <li>Set minimum Python version to 3.11. (thanks to EmperorArthur)</li>
+        </ul>
+      </description>
+    </release><release version="1.4.1" date="2026-01-22">
       <description>
         <p>Implements the following changes:</p>
         <ul>
