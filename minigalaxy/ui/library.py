@@ -81,17 +81,24 @@ class Library(Gtk.Viewport):
         self.owned_products_ids = self.api.get_owned_products_ids()
         # Get already installed games first
         self.games = self.__get_installed_games()
-        GLib.idle_add(self.__create_gametiles)
+        self.__create_gametiles_iteratively(5)
 
         # Get games from the API
         self.__add_games_from_api()
+        self.__create_gametiles_iteratively(5)
+        GLib.idle_add(self.filter_library)
+
+    def __create_gametiles_iteratively(self, step_width=5):
+        if len(self.games) < step_width*2:
+            GLib.idle_add(self.__create_gametiles)
+            return
+
         index = 0
         while index < len(self.games):
-            games_chunk = self.games[index:index+10]
+            games_chunk = self.games[index:index+step_width]
             GLib.idle_add(self.__create_gametiles, games_chunk)
-            index += 5
+            index += step_width
             time.sleep(0.1)
-        GLib.idle_add(self.filter_library)
 
     def __load_tile_states(self):
         for child in self.flowbox.get_children():
@@ -139,6 +146,16 @@ class Library(Gtk.Viewport):
 
         if not games_to_add:
             games_to_add = self.games
+
+        logging.debug("Create gametiles for %s games", str(len(games_to_add)))
+
+        for child in self.flowbox.get_children():
+            tile = child.get_children()[0]
+            if tile.game in games_to_add:
+                logging.debug("Update existing tile for [%s] with new game instance", tile.game.name)
+                new_game = games_to_add[games_to_add.index(tile.game)]
+                new_game.library_tile = tile
+                tile.game = new_game
 
         for game in games_to_add:
             if game.library_tile:
