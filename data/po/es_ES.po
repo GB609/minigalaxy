@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-22 11:31+0200\n"
-"PO-Revision-Date: 2023-02-21 13:26-0300\n"
-"Last-Translator: \n"
-"Language-Team: \n"
+"PO-Revision-Date: 2026-07-05 10:17+0000\n"
+"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"Language-Team: Spanish <https://hosted.weblate.org/projects/minigalaxy/"
+"glossary/es/>\n"
 "Language: es_ES\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Poedit 3.2.2\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 2026.7.1.dev0\n"
 
 #. A short description of what Minigalaxy is
 #: minigalaxy/ui/data/about.ui:10
@@ -244,8 +245,7 @@ msgstr "Francés"
 
 #: minigalaxy/ui/properties.py:86
 msgid "GameMode wasn't found. Using GameMode cannot be enabled."
-msgstr ""
-"No se ha encontrado GameMode. No es posible activar el uso de GameMode."
+msgstr "No se ha encontrado GameMode. No es posible activar el uso de GameMode."
 
 #: minigalaxy/ui/information.py:142
 msgid "Genre"
@@ -390,8 +390,7 @@ msgstr ""
 
 #: minigalaxy/ui/properties.py:91
 msgid "MangoHud wasn't found. Using MangoHud cannot be enabled."
-msgstr ""
-"No se ha encontrado MangoHud. No es posible activar el uso de MangoHud."
+msgstr "No se ha encontrado MangoHud. No es posible activar el uso de MangoHud."
 
 #. Label for configuration option
 #: minigalaxy/ui/data/download_list.ui:43
