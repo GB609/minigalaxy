@@ -2,7 +2,7 @@
 name = "minigalaxy"
 description = "A simple GOG Linux client"
 dynamic= [ "version" ]
-license = "GPL-3.0-only"
+license = { text = "GPL-3.0-only" }
 license-files = [ "LICENSE", "THIRD-PARTY-LICENSES.md" ]
 authors = [
     { name = "Wouter Wijsman", email = "wwijsman@live.nl" }
