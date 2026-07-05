@@ -1,12 +1,12 @@
-**1.4.3**
+**1.4.2**
+- Critical bugfix: Use another API to determine game platform support (thanks to GB609)
+- UI improvement: Show games in the library incrementally when starting (thanks to GB609)
 - Reduce unnecessary writes to the config file. (thanks to GB609)
 - Fix a possible exception during game installation not being handled correctly.
 - Logs are now also written to `~/.cache/minigalaxy/minigalaxy.log`.
 - Ask the user which binary to launch if Minigalaxy is unsure.
 - The `wine` executable can now also be changed before a game is installed (thanks to GB609).
 - Resolve deprecation/syntax warnings and quiet test output noise. (thanks to slowsage)
-
-**1.4.2**
 - Switch to using PEP 302 compliant resources, excluding translations. (thanks to EmperorArthur)
 - Allow installing Minigalaxy via pipx. (thanks to EmperorArthur)
 - Switch debian builds to using pybuild-plugin-pyproject. (thanks to EmperorArthur)

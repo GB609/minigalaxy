@@ -19,6 +19,8 @@ class NoDownloadLinkFound(BaseException):
 
 
 class Api:
+    PRODUCTS_API = "https://api.gog.com/products"
+
     def __init__(self, config: Config, session: Session):
         self.config = config
         self.session = session
@@ -80,29 +82,32 @@ class Api:
     def get_library(self):
         err_msg = ""
         games = []
-        if self.active_token:
-            current_page = 1
-            all_pages_processed = False
-            url = "https://embed.gog.com/account/getFilteredProducts"
+        if not self.active_token:
+            return [], "Couldn't connect to GOG servers"
 
-            while not all_pages_processed:
-                params = {
-                    'mediaType': 1,  # 1 means game
-                    'page': current_page,
-                }
-                response = self.__request(url, params=params)
-                if "totalPages" not in response:
-                    err_msg = "Couldn't load game library"
-                    return games, err_msg
-                total_pages = response["totalPages"]
+        current_page = 1
+        all_pages_processed = False
+        url = "https://embed.gog.com/account/getFilteredProducts"
 
-                self.__parse_productlist_json(response["products"], games)
+        while not all_pages_processed:
+            params = {
+                'mediaType': 1,  # 1 means game
+                'page': current_page,
+            }
+            response = self.__request(url, params=params)
+            if "totalPages" not in response:
+                err_msg = "Couldn't load game library"
+                return games, err_msg
+            total_pages = response["totalPages"]
 
-                if current_page == total_pages:
-                    all_pages_processed = True
-                current_page += 1
-        else:
-            err_msg = "Couldn't connect to GOG servers"
+            self.__parse_productlist_json(response["products"], games)
+
+            if current_page == total_pages:
+                all_pages_processed = True
+            current_page += 1
+
+        games = self.__filter_games_with_valid_platforms(games)
+
         return games, err_msg
 
     def __parse_productlist_json(self, product_list, game_list):
@@ -110,23 +115,69 @@ class Api:
             if product["id"] in IGNORE_GAME_IDS:
                 continue
 
-            worksOn = product.get("worksOn", {})
-            platform = None
-            if worksOn.get("Linux", False):
-                platform = "linux"
-            elif worksOn.get("Windows", False):
-                platform = "windows"
-
-            if not platform:
-                logging.warning("%s has no platform information - skip", product["title"])
-                continue
-
             if not product.get("url", None):
                 logging.warning("%s (%s) has no store page url", product["title"], product['id'])
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
-                        image_url=product["image"], platform=platform, category=product["category"])
+                        image_url=product["image"], platform="windows", category=product.get("category", None))
             game_list.append(game)
+
+    def __filter_games_with_valid_platforms(self, games):
+        """
+        Query the products api in batches of 50 and pull the supported platforms info out of there.
+        This will also assign the resulting product info to the game to cache it for further use by LibraryEntry.
+        """
+        # the additional platform check is only needed for games which are not installed
+        games_with_platform = []
+        for game in games:
+            if not game.is_installed():
+                games_with_platform.append(game)
+        games = games_with_platform
+        games_with_platform = []
+
+        while len(games) > 0:
+            chunk = {}
+            for game in games[:50]:
+                chunk[game.id] = game
+            games = games[50:]
+
+            id_query = ','.join(str(gameid) for gameid in chunk)
+            request_url = "{}?expand=downloads,expanded_dlcs&ids={}".format(self.PRODUCTS_API, id_query)
+            # returns a list at the top level
+            product_infos = self.__request(request_url)
+            if not product_infos or len(product_infos) < len(chunk):
+                logging.warning("The current batch of product infos does not contain all requested games.")
+
+            self.__upate_games_with_platform(games_with_platform, product_infos, chunk)
+        return games_with_platform
+
+    def __upate_games_with_platform(self, games_with_platform: list, product_infos: list, game_dict: dict):
+        for product in product_infos:
+            platform = self.__platform_from_product(product)
+            game = game_dict[product.get('id')]
+            if platform:
+                games_with_platform.append(game)
+                game.platform = platform
+                game.product_info = product
+
+    def __platform_from_product(self, product: dict):
+        """Expects a dictionary in the format provided by 'api.gog.com/products' """
+
+        compat = product.get("content_system_compatibility", {})
+
+        # content_system_compatibility is not correct sometimes,
+        # see Goodbye Eternity for example: https://api.gog.com/products/1424453125?expand=downloads,expanded_dlcs
+        # as a fallback, iterate over the installers and pull the OS info from there
+        for installer in product["downloads"]["installers"]:
+            if 'os' in installer:
+                compat[installer['os']] = True
+        if compat.get("linux", False):
+            return "linux"
+        if compat.get("windows", False):
+            return "windows"
+
+        logging.warning("%s has no platform information - skip", product["title"])
+        return None
 
     def get_owned_products_ids(self):
         if not self.active_token:
@@ -154,9 +205,13 @@ class Api:
 
     # Get Extrainfo about a game
     def get_info(self, game: Game) -> dict:
-        request_url = "https://api.gog.com/products/{}?locale=en-US&expand=downloads,expanded_dlcs,description,screenshots," \
-                      "videos,related_products,changelog".format(str(game.id))
+        if game.product_info and game.product_info_age < 60:
+            logging.debug("Reusing cached result for api.get_info(%s)", game.name)
+            return game.product_info
+
+        request_url = "{}/{}?locale=en-US&expand=downloads,expanded_dlcs".format(self.PRODUCTS_API, str(game.id))
         response = self.__request(request_url)
+        game.product_info = response
         return response
 
     def get_dlc_info(self, game: Game, dlc_id):

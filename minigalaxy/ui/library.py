@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import threading
+import time
 
 from minigalaxy.api import Api
 from minigalaxy.config import Config
@@ -80,12 +81,24 @@ class Library(Gtk.Viewport):
         self.owned_products_ids = self.api.get_owned_products_ids()
         # Get already installed games first
         self.games = self.__get_installed_games()
-        GLib.idle_add(self.__create_gametiles)
+        self.__create_gametiles_iteratively(5)
 
         # Get games from the API
         self.__add_games_from_api()
-        GLib.idle_add(self.__create_gametiles)
+        self.__create_gametiles_iteratively(5)
         GLib.idle_add(self.filter_library)
+
+    def __create_gametiles_iteratively(self, step_width=5):
+        if len(self.games) < step_width*2:
+            GLib.idle_add(self.__create_gametiles)
+            return
+
+        index = 0
+        while index < len(self.games):
+            games_chunk = self.games[index:index+step_width]
+            GLib.idle_add(self.__create_gametiles, games_chunk)
+            index += step_width
+            time.sleep(0.1)
 
     def __load_tile_states(self):
         for child in self.flowbox.get_children():
@@ -128,23 +141,27 @@ class Library(Gtk.Viewport):
         tile2 = child2.get_children()[0].game
         return tile2 < tile1
 
-    def __create_gametiles(self) -> None:
+    def __create_gametiles(self, games_to_add=None) -> None:
         """Gets called twice: Once for installed, once for not installed games."""
-        games_with_tiles = []
+
+        if not games_to_add:
+            games_to_add = self.games
+
+        logging.debug("Create gametiles for %s games", str(len(games_to_add)))
+
         for child in self.flowbox.get_children():
             tile = child.get_children()[0]
-            if tile.game in self.games:
-                games_with_tiles.append(tile.game)
-                """Games which already have a tile during the second invocation are installed games.
-                These did NOT have api information about the thumbnail url in their Game instance in the first pass.
-                Thus, they weren't able to load the thumbnail if it wasn't cached before. Try again now.
-                This mostly applies when the user empties the cache. Otherwise THUMBNAIL dir should contain a file from
-                when the game still wasn't installed
-                """
-                tile.load_thumbnail()
+            if tile.game in games_to_add:
+                logging.debug("Update existing tile for [%s] with new game instance", tile.game.name)
+                new_game = games_to_add[games_to_add.index(tile.game)]
+                new_game.library_tile = tile
+                tile.game = new_game
 
-        for game in self.games:
-            if game in games_with_tiles:
+        for game in games_to_add:
+            if game.library_tile:
+                # the game already has a visible entry in the library
+                # request to load the thumbnail, if there is a url for it and it hasnt been loaded before
+                game.library_tile.load_thumbnail()
                 continue
             if game.is_installed():
                 self.__add_gametile(game)
@@ -152,7 +169,7 @@ class Library(Gtk.Viewport):
                 self.__add_gametile(game)
             elif game.platform in self.config.platform_mode:
                 self.__add_gametile(game)
-            else:
+            elif game in self.games:
                 # housekeeping: API.get_library returns all owned games
                 # (useful when api-caching is introduced as the same request can be used independent of platform_mode)
                 # removing not shown games is only a small memory optimization
@@ -164,6 +181,7 @@ class Library(Gtk.Viewport):
             game_tile = GameTile(self, game)
         elif view == "list":
             game_tile = GameTileList(self, game)
+        game.library_tile = game_tile
 
         # Start download if Minigalaxy was closed while downloading this game
         game_tile.resume_download_if_expected()
@@ -215,6 +233,7 @@ class Library(Gtk.Viewport):
         return games
 
     def __add_games_from_api(self):
+        logging.info("Start retrieving owned games from the api...")
         retrieved_games, err_msg = self.api.get_library()
         if not err_msg:
             self.offline = False
@@ -223,6 +242,7 @@ class Library(Gtk.Viewport):
             logging.info("Client is offline, showing installed games only")
             GLib.idle_add(self.parent_window.show_error, _("Failed to retrieve library"), _(err_msg))
         game_category_dict = {}
+        logging.info("Create or update the game list with %s games", len(retrieved_games))
         for game in retrieved_games:
             # NOTE: the 'in' check and 'list.index' function depend on the '__eq__' method of Game.
             # 'Game.__eq__(self, other)' is a bit lenient, it ignores the property 'id' if it is zero for 'self' or 'other'.
