@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: minigalaxy 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-22 11:31+0200\n"
-"PO-Revision-Date: 2026-07-06 07:08+0000\n"
+"PO-Revision-Date: 2026-07-07 12:01+0000\n"
 "Last-Translator: Wouter Wijsman <wwijsman@live.nl>\n"
 "Language-Team: Dutch <https://hosted.weblate.org/projects/minigalaxy/"
 "minigalaxy/nl/>\n"
@@ -152,7 +152,7 @@ msgstr "Deens"
 #. Tooltip of icon button to delete a downloaded file
 #: minigalaxy/ui/download_list.py:330
 msgid "Delete file"
-msgstr ""
+msgstr "Bestanden verwijderen"
 
 #: minigalaxy/ui/data/download_list.ui:202
 msgctxt "download_group"
