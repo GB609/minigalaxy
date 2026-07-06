@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: minigalaxy 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-22 11:31+0200\n"
-"PO-Revision-Date: 2026-07-06 07:06+0000\n"
-"Last-Translator: GB609 <39741460+GB609@users.noreply.github.com>\n"
+"PO-Revision-Date: 2026-07-07 12:01+0000\n"
+"Last-Translator: Wouter Wijsman <wwijsman@live.nl>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/minigalaxy/"
 "minigalaxy/de/>\n"
 "Language: de\n"
@@ -77,7 +77,7 @@ msgstr "Kategorienfilter"
 #. Tooltip for category filter button
 #: minigalaxy/ui/data/application.ui:144
 msgid "Category filters"
-msgstr ""
+msgstr "Kategorienfilter"
 
 #: minigalaxy/ui/data/download_list.ui:56
 msgctxt "download_configuration"
@@ -85,6 +85,8 @@ msgid ""
 "Change how many parallel downloads are allowed.\n"
 "Range is 1-8."
 msgstr ""
+"Ändere wie viele Downloads gleichseitig laufen dürfen.\n"
+"Spanne 1-8."
 
 #: minigalaxy/ui/data/properties.ui:108 minigalaxy/ui/data/properties.ui:120
 msgid "Check for game updates in the background"
@@ -100,7 +102,7 @@ msgstr "Chinesisch"
 
 #: minigalaxy/ui/chooselauchoption.py:14
 msgid "Choose Launch Option"
-msgstr ""
+msgstr "Startoption wählen"
 
 #: minigalaxy/ui/data/properties.ui:268
 msgid "Command flags:"
@@ -355,7 +357,7 @@ msgstr "Sprache: "
 
 #: minigalaxy/ui/data/chooselaunchoption.ui:33
 msgid "Launch"
-msgstr ""
+msgstr "Starten"
 
 #: minigalaxy/ui/library_entry.py:695
 msgid "Launch the game"
@@ -363,7 +365,7 @@ msgstr "Spiel starten"
 
 #: minigalaxy/constants.py:85
 msgid "Linux only"
-msgstr ""
+msgstr "Nur Linux"
 
 #: minigalaxy/constants.py:79
 msgid "List"
