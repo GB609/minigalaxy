@@ -1,2 +1,2 @@
 requests
-PyGObject
+PyGObject==3.40.0
