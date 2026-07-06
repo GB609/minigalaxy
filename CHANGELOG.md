@@ -1,3 +1,6 @@
+**1.4.3**
+- Releases now target Ubuntu 26.04
+
 **1.4.2**
 - Critical bugfix: Use another API to determine game platform support (thanks to GB609)
 - UI improvement: Show games in the library incrementally when starting (thanks to GB609)
