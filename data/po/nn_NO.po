@@ -8,15 +8,15 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-06-22 11:31+0200\n"
-"PO-Revision-Date: 2026-07-06 07:07+0000\n"
-"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"PO-Revision-Date: 2026-07-21 15:01+0000\n"
+"Last-Translator: Kraksen <kraks@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Norwegian Nynorsk <https://hosted.weblate.org/projects/"
 "minigalaxy/minigalaxy/nn/>\n"
 "Language: nn_NO\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Weblate 2026.7.1.dev0\n"
+"X-Generator: Weblate 2026.8.dev0\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
 #. A short description of what Minigalaxy is
@@ -33,7 +33,7 @@ msgstr "Om"
 #: minigalaxy/ui/data/download_list.ui:109
 msgctxt "download_group"
 msgid "Active Downloads:"
-msgstr ""
+msgstr "Aktive nedlastingar:"
 
 #: minigalaxy/ui/data/properties.ui:269 minigalaxy/ui/data/properties.ui:281
 msgid "Added at the end of the command used to launch the game"
@@ -45,7 +45,7 @@ msgstr "Lagt til framføre kommandoen som er brukt for å starte spelet"
 
 #: minigalaxy/ui/data/categoryfilters.ui:72
 msgid "Apply"
-msgstr ""
+msgstr "Bruk"
 
 #: minigalaxy/ui/library_entry.py:153
 msgid "Are you sure you want to cancel downloading {}?"
@@ -72,12 +72,12 @@ msgstr "Avbryt"
 
 #: minigalaxy/ui/categoryfilters.py:26
 msgid "Category Filters"
-msgstr ""
+msgstr "Kategorifilter"
 
 #. Tooltip for category filter button
 #: minigalaxy/ui/data/application.ui:144
 msgid "Category filters"
-msgstr ""
+msgstr "Filtrer på kategori"
 
 #: minigalaxy/ui/data/download_list.ui:56
 msgctxt "download_configuration"
@@ -88,11 +88,11 @@ msgstr ""
 
 #: minigalaxy/ui/data/properties.ui:108 minigalaxy/ui/data/properties.ui:120
 msgid "Check for game updates in the background"
-msgstr ""
+msgstr "Sjå etter speloppdateringar i bakgrunnen"
 
 #: minigalaxy/ui/data/properties.ui:107
 msgid "Check for updates:"
-msgstr ""
+msgstr "Sjå etter oppdateringar:"
 
 #: minigalaxy/constants.py:5
 msgid "Chinese"
@@ -117,9 +117,8 @@ msgid "Couldn't open PCGamingWiki page"
 msgstr "Kunne ikkje opne produktsida"
 
 #: minigalaxy/ui/information.py:76
-#, fuzzy
 msgid "Couldn't open forum page"
-msgstr "Kunne ikkje opne produktsida"
+msgstr "Kunne ikkje opne forumsida"
 
 #: minigalaxy/ui/information.py:66
 msgid "Couldn't open store page"
@@ -137,7 +136,7 @@ msgstr "Opprett menysnarvegar: "
 
 #: minigalaxy/constants.py:54
 msgid "Czech"
-msgstr ""
+msgstr "Tsjekkisk"
 
 #: minigalaxy/ui/data/gametilelist.ui:51 minigalaxy/ui/data/gametile.ui:66
 msgid "DLC"
@@ -150,21 +149,20 @@ msgstr "Dansk"
 #. Tooltip of icon button to delete a downloaded file
 #: minigalaxy/ui/download_list.py:330
 msgid "Delete file"
-msgstr ""
+msgstr "Slett fil"
 
 #: minigalaxy/ui/data/download_list.ui:202
 msgctxt "download_group"
 msgid "Done:"
-msgstr ""
+msgstr "Ferdig:"
 
 #: minigalaxy/ui/library_entry.py:658
 msgid "Download"
 msgstr "Last ned"
 
 #: minigalaxy/ui/library_entry.py:658
-#, fuzzy
 msgid "Download and install the game"
-msgstr "Vis berre installerte spel"
+msgstr "Last ned og installer spelet"
 
 #: minigalaxy/ui/library_entry.py:226 minigalaxy/ui/library_entry.py:299
 #: minigalaxy/ui/library_entry.py:328
@@ -178,12 +176,12 @@ msgstr "Lastar ned…"
 #: minigalaxy/ui/data/download_list.ui:201
 msgctxt "download_group"
 msgid "Downloads that completed, failed or were stopped."
-msgstr ""
+msgstr "Nedlastingae som er ferdige, mislykkast eller vart stoppa."
 
 #: minigalaxy/ui/data/download_list.ui:139
 msgctxt "download_group"
 msgid "Downloads waiting for a free worker slot."
-msgstr ""
+msgstr "Nedlastingar som ventar."
 
 #: minigalaxy/constants.py:7 minigalaxy/constants.py:55
 msgid "Dutch"
