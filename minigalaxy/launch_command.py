@@ -15,7 +15,6 @@ class LaunchCommand:
             self.command.insert(0, "gamemoderun")
         if game.get_info(InfoKey.MANGOHUD) is True:
             self.command.insert(0, "mangohud")
-            self.command.insert(1, "--dlsym")
 
         var_list = shlex.split(game.get_info(InfoKey.VARIABLES))
         command_list = shlex.split(game.get_info(InfoKey.COMMAND))

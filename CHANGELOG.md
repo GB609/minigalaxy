@@ -1,5 +1,6 @@
 **1.4.3**
 - Releases now target Ubuntu 26.04
+- Mangohud dlsym enabled by default (thanks to RoGreat)
 
 **1.4.2**
 - Critical bugfix: Use another API to determine game platform support (thanks to GB609)
