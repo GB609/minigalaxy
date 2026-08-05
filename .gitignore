@@ -27,3 +27,5 @@ debian/minigalaxy.debhelper.log
 debian/minigalaxy.postinst.debhelper
 debian/minigalaxy.prerm.debhelper
 .vscode/settings.json
+tmp/
+/build-appimage/

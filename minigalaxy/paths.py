@@ -23,3 +23,6 @@ DEFAULT_INSTALL_DIR = os.path.expanduser("~/GOG Games")
 LOCALE_DIR = os.path.abspath(os.path.join(LAUNCH_DIR, "../data/mo"))
 if not os.path.exists(LOCALE_DIR):
     LOCALE_DIR = os.path.abspath(os.path.join(LAUNCH_DIR, "../share/minigalaxy/translations"))
+if not os.path.exists(LOCALE_DIR):
+    # for installation in non-standard python runtimes, like in AppImages
+    LOCALE_DIR = os.path.abspath(os.path.join(sys.base_prefix, "share/minigalaxy/translations"))

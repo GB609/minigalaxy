@@ -32,6 +32,8 @@ current_locale = Config().locale
 # getlocale() returns the locale set by setlocale(LC_ALL, '') earlier in this
 # module, which read the environment before LANG/LANGUAGE were unset above.
 default_locale = locale.getlocale()[0]
+logging.debug("Init locales: default=%s, current=%s", default_locale, current_locale)
+logging.debug("Loading locale files from %s", LOCALE_DIR)
 if current_locale == '':
     if default_locale is None:
         lang = gettext.translation(TRANSLATION_DOMAIN, LOCALE_DIR, languages=['en'], fallback=True)

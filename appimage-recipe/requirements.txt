@@ -1,0 +1,2 @@
+requests
+PyGObject==3.44.2

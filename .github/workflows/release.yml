@@ -11,7 +11,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y debhelper dh-python python3-all help2man devscripts gettext lsb-release xmlstarlet git build-essential pybuild-plugin-pyproject
-        pip install setuptools
+        pip install setuptools python-appimage build
     - uses: actions/checkout@v6
       with:
         ref: master
@@ -26,6 +26,13 @@ jobs:
     - name: Build deb package
       run: |
         dpkg-buildpackage -us -uc
+    - name: Build AppImage
+      uses: kohlerdominik/docker-run-action@v2.1.0
+      with:
+        image: quay.io/pypa/manylinux_2_28_x86_64
+        volumes: ${{ github.workspace }}:/mnt/minigalaxy
+        run: |
+          /mnt/minigalaxy/scripts/make-appimage.sh
     - name: Commit changes
       run: |
         git config --global user.name 'Wouter Wijsman'
@@ -41,7 +48,9 @@ jobs:
         name: Minigalaxy version ${{ steps.tag.outputs.VERSION }}
         body_path: release.md
         prerelease: true
+        # the appimage script also builds the wheel, both are placed in the same directory
         files: |
           ../minigalaxy_*.deb
+          ./build-appimage/output/*
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

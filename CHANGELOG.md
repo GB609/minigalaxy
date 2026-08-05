@@ -1,4 +1,5 @@
 **1.4.3**
+- Releases will now include a basic AppImage (experimental) (thanks to GB609)
 - Releases now target Ubuntu 26.04
 - Mangohud dlsym enabled by default (thanks to RoGreat)
 
