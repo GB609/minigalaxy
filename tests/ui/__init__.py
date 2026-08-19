@@ -4,9 +4,10 @@ from unittest.mock import MagicMock
 class MockGiRepository:
 
     class Gtk:
-        Widget = MagicMock()
-        Settings = MagicMock()
+        AboutDialog = MagicMock()
         ResponseType = MagicMock()
+        Settings = MagicMock()
+        Widget = MagicMock()
 
         class ApplicationWindow:
             def __init__(self, title):

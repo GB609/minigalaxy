@@ -258,10 +258,12 @@ class TestLibrary(TestCase):
         config.show_hidden_games = True
         api = MagicMock()
         api.get_owned_products_ids.return_value = []
-        api.get_library.return_value = api_games, err_msg
+        api.get_library.return_value = [*api_games], err_msg
         library = Library(MagicMock(), config, api, MagicMock())
         library.flowbox.get_children.return_value = []
-        library._Library__get_installed_games = MagicMock(return_value=installed)
+        # the list returned by this mock must be a copy, or its not possible to assert with it
+        # because Library will take it as self.games and manipulate it
+        library._Library__get_installed_games = MagicMock(return_value=[*installed])
         GameTile.reset_mock()
         library.flowbox.reset_mock()
         library.flowbox.get_children.return_value = []
@@ -312,8 +314,7 @@ class TestLibrary(TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             installed, api_games, expected_linux, _windows = self._mixed_library_games(tmpdir)
             library = self._tile_library(installed, api_games)
-            library._library_generation = 1
-            library._Library__update_library(1)
+            library._Library__update_library()
 
             added_ids = {game.id for game in self._added_tile_games()}
             self.assertIn(installed[0].id, added_ids)
@@ -324,8 +325,7 @@ class TestLibrary(TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             installed, api_games, expected_linux, windows = self._mixed_library_games(tmpdir)
             library = self._tile_library(installed, api_games)
-            library._library_generation = 1
-            library._Library__update_library(1)
+            library._Library__update_library()
 
             remaining_ids = {game.id for game in library.games}
             added_ids = {game.id for game in self._added_tile_games()}
@@ -343,8 +343,7 @@ class TestLibrary(TestCase):
             api_windows = Game(name="Installed Windows", game_id=42, platform="windows")
             downloadable_windows = Game(name="Uninstalled Windows", game_id=43, platform="windows")
             library = self._tile_library([installed_windows], [api_windows, downloadable_windows])
-            library._library_generation = 1
-            library._Library__update_library(1)
+            library._Library__update_library()
 
             remaining_ids = {game.id for game in library.games}
             added_ids = {game.id for game in self._added_tile_games()}
@@ -366,16 +365,16 @@ class TestLibrary(TestCase):
             installed, api_games, expected_linux, windows = self._mixed_library_games(tmpdir)
             library = self._tile_library(installed, api_games)
             library.api.get_library.side_effect = lambda: (events.append("api"), (api_games, ""))[1]
-            library._library_generation = 1
-            apply_installed = library._Library__apply_installed_games
+            apply_installed = library._Library__create_gametiles
             with patch.object(library_module.GLib, "idle_add", side_effect=queue_idle):
-                library._Library__update_library(1)
+                library._Library__update_library()
+                self._flush_idle(idle_queue, 1)  # __load_tile_states
 
                 self.assertIn("api", events)
                 self.assertLess(events.index(apply_installed), events.index("api"))
 
                 self._flush_idle(idle_queue, 1)
-                self.assertEqual([], self._added_tile_games())
+                self.assertEqual(installed, self._added_tile_games())
 
                 self._flush_idle(idle_queue, 1)
                 added_after_installed = self._added_tile_games()
@@ -393,31 +392,6 @@ class TestLibrary(TestCase):
                 for game in windows:
                     self.assertNotIn(game.id, added_ids)
                 self.assertEqual([], idle_queue)
-
-    def test_update_library_sets_filter_before_adding_tiles(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            installed, api_games, _linux, _windows = self._mixed_library_games(tmpdir)
-            library = self._tile_library(installed, api_games)
-            library._library_generation = 1
-            library._Library__update_library(1)
-
-            method_names = [name for name, _args, _kwargs in library.flowbox.mock_calls]
-            self.assertIn("set_filter_func", method_names)
-            self.assertIn("add", method_names)
-            self.assertLess(method_names.index("set_filter_func"), method_names.index("add"))
-
-    def test_stale_generation_apply_is_ignored(self):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            installed, api_games, expected_linux, _windows = self._mixed_library_games(tmpdir)
-            library = self._tile_library(installed, api_games)
-            library._library_generation = 2
-            library._Library__apply_installed_games(installed, 1)
-            library._Library__apply_api_games(api_games, "", 1)
-
-            self.assertEqual([], library.games)
-            self.assertEqual([], self._added_tile_games())
-            for game in expected_linux:
-                self.assertIsNone(game.library_tile)
 
 
 del sys.modules['gi']

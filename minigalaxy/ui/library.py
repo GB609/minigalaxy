@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import threading
+import time
 
 from minigalaxy.api import Api
 from minigalaxy.config import Config
@@ -51,7 +52,6 @@ class Library(Gtk.Viewport):
         self.owned_products_ids = []
         self._queue = []
         self.category_filters = []
-        self._library_generation = 0
         self.configure_library_sort()
 
     def _debounce(self, thunk):
@@ -72,45 +72,37 @@ class Library(Gtk.Viewport):
         self.update_library()
 
     def update_library(self) -> None:
-        self._library_generation += 1
-        generation = self._library_generation
-        library_update_thread = threading.Thread(target=self.__update_library, args=(generation,))
+        library_update_thread = threading.Thread(target=self.__update_library)
         library_update_thread.daemon = True
         library_update_thread.start()
 
-    def __update_library(self, generation):
+    def __update_library(self):
         GLib.idle_add(self.__load_tile_states)
         self.owned_products_ids = self.api.get_owned_products_ids()
-        installed = self.__get_installed_games()
-        # Show installed before the API round-trip. Worker does not touch self.games.
-        GLib.idle_add(self.__apply_installed_games, installed, generation)
-        retrieved_games, err_msg = self.__fetch_library_from_api()
-        GLib.idle_add(self.__apply_api_games, retrieved_games, err_msg, generation)
+        # Get already installed games first
+        self.games = self.__get_installed_games()
+        self.__create_gametiles_iteratively(5)
 
-    def __apply_installed_games(self, installed, generation):
-        if generation != self._library_generation:
-            return False
-        self.games = sorted(installed)
-        self.filter_library()
-        self.__create_gametiles(self.games)
-        return False
+        # Get games from the API
+        self.__add_games_from_api()
+        self.__create_gametiles_iteratively(5)
+        GLib.idle_add(self.filter_library)
 
-    def __apply_api_games(self, retrieved_games, err_msg, generation):
-        if generation != self._library_generation:
-            return False
-        self.__merge_api_games(retrieved_games, err_msg)
-        self.games = [game for game in self.games if self.__should_show_game(game)]
-        self.games.sort()
-        self.filter_library()
-        self.__create_gametiles(self.games)
-        return False
+    def __create_gametiles_iteratively(self, step_width=5):
+        if len(self.games) < step_width*2:
+            GLib.idle_add(self.__create_gametiles, [*self.games])
+            # wait until the update is done to make sure there's a consistent state before going on
+            time.sleep(0.1)
+            return
 
-    def __should_show_game(self, game) -> bool:
-        return (
-            game.is_installed()
-            or game.id in self.config.current_downloads
-            or game.platform in self.config.platform_mode
-        )
+        # make a copy of self.games to guard against concurrent removals sabotaging chunks
+        games_to_add = [*self.games]
+        index = 0
+        while index < len(games_to_add):
+            games_chunk = games_to_add[index:index+step_width]
+            GLib.idle_add(self.__create_gametiles, games_chunk)
+            index += step_width
+            time.sleep(0.1)
 
     def __load_tile_states(self):
         for child in self.flowbox.get_children():
@@ -175,8 +167,17 @@ class Library(Gtk.Viewport):
                 # request to load the thumbnail, if there is a url for it and it hasnt been loaded before
                 game.library_tile.load_thumbnail()
                 continue
-            if self.__should_show_game(game):
+            if game.is_installed():
                 self.__add_gametile(game)
+            elif game.id in self.config.current_downloads:
+                self.__add_gametile(game)
+            elif game.platform in self.config.platform_mode:
+                self.__add_gametile(game)
+            elif game in self.games:
+                # housekeeping: API.get_library returns all owned games
+                # (useful when api-caching is introduced as the same request can be used independent of platform_mode)
+                # removing not shown games is only a small memory optimization
+                self.games.remove(game)
 
     def __add_gametile(self, game):
         view = self.config.view
@@ -235,15 +236,9 @@ class Library(Gtk.Viewport):
 
         return games
 
-    def __fetch_library_from_api(self):
-        logging.info("Start retrieving owned games from the api...")
-        return self.api.get_library()
-
     def __add_games_from_api(self):
-        retrieved_games, err_msg = self.__fetch_library_from_api()
-        self.__merge_api_games(retrieved_games, err_msg)
-
-    def __merge_api_games(self, retrieved_games, err_msg):
+        logging.info("Start retrieving owned games from the api...")
+        retrieved_games, err_msg = self.api.get_library()
         if not err_msg:
             self.offline = False
         else:
