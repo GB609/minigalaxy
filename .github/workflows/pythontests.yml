@@ -18,12 +18,31 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements-testing.txt
     - name: Lint with flake8
+      shell: bash
       run: |
-        flake8 . --append-config=.flake8.soft --count --show-source --statistics
+        echo -e '# Flake results\n```' >> "${GITHUB_STEP_SUMMARY}"
+        if flake8 . --append-config=.flake8.soft --count --show-source --statistics 2>&1 | tee -a "${GITHUB_STEP_SUMMARY}"; then
+          success=0
+        else
+          success=1
+        fi
+        echo -e '\n```\n' >> "${GITHUB_STEP_SUMMARY}"
+        exit "${success}"
     - name: Lint with flake8 (strict, but non-fatal)
       run: |
         flake8 . --count --show-source --statistics --exit-zero
     - name: Run unit tests
+      shell: bash
       run: |
-        python3 -m coverage run --source minigalaxy -m unittest discover -v tests && python3 -m coverage report -m
-
+        echo -e '\n# Test Results:\n```\n' >>"${GITHUB_STEP_SUMMARY}"
+        if python3 -m coverage run --source minigalaxy -m unittest discover -v tests 2>&1 | tee test-results.tmp.log; then
+          success="0"
+        else
+          success="${PIPESTATUS[0]}"
+        fi
+        tail -n 5 test-results.tmp.log >>"${GITHUB_STEP_SUMMARY}"
+        rm test-results.tmp.log
+        echo -e '\n```\n' >>"${GITHUB_STEP_SUMMARY}"
+        echo -e '\n # Coverage Results\n' >>"${GITHUB_STEP_SUMMARY}"
+        python3 -m coverage report -m --format=markdown >>"${GITHUB_STEP_SUMMARY}"
+        exit "${success}"
