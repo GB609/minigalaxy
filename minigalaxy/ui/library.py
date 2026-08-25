@@ -90,12 +90,16 @@ class Library(Gtk.Viewport):
 
     def __create_gametiles_iteratively(self, step_width=5):
         if len(self.games) < step_width*2:
-            GLib.idle_add(self.__create_gametiles)
+            GLib.idle_add(self.__create_gametiles, [*self.games])
+            # wait until the update is done to make sure there's a consistent state before going on
+            time.sleep(0.1)
             return
 
+        # make a copy of self.games to guard against concurrent removals sabotaging chunks
+        games_to_add = [*self.games]
         index = 0
-        while index < len(self.games):
-            games_chunk = self.games[index:index+step_width]
+        while index < len(games_to_add):
+            games_chunk = games_to_add[index:index+step_width]
             GLib.idle_add(self.__create_gametiles, games_chunk)
             index += step_width
             time.sleep(0.1)

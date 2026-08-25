@@ -23,6 +23,8 @@ sys.modules['minigalaxy.ui.gametile'] = m_gametile
 sys.modules['minigalaxy.ui.gametilelist'] = m_gametilelist
 sys.modules['minigalaxy.ui.categoryfilters'] = m_categoryfilters
 from minigalaxy.game import Game           # noqa: E402
+from minigalaxy.ui.gametile import GameTile  # noqa: E402
+from minigalaxy.ui import library as library_module  # noqa: E402
 from minigalaxy.ui.library import Library, get_installed_windows_games, read_game_categories_file, \
     update_game_categories_file  # noqa: E402
 
@@ -245,6 +247,151 @@ class TestLibrary(TestCase):
             tmpfile.seek(os.SEEK_SET)
             actual = json.load(tmpfile)
             self.assertDictEqual(actual, expected)
+
+    def _tile_library(self, installed, api_games, err_msg=""):
+        config = MagicMock()
+        config.locale = "en"
+        config.installed_filter = False
+        config.platform_mode = ["linux"]
+        config.view = "grid"
+        config.current_downloads = []
+        config.show_hidden_games = True
+        api = MagicMock()
+        api.get_owned_products_ids.return_value = []
+        api.get_library.return_value = [*api_games], err_msg
+        library = Library(MagicMock(), config, api, MagicMock())
+        library.flowbox.get_children.return_value = []
+        # the list returned by this mock must be a copy, or its not possible to assert with it
+        # because Library will take it as self.games and manipulate it
+        library._Library__get_installed_games = MagicMock(return_value=[*installed])
+        GameTile.reset_mock()
+        library.flowbox.reset_mock()
+        library.flowbox.get_children.return_value = []
+        return library
+
+    def _flush_idle(self, queue, count=1):
+        for _ in range(count):
+            func, args = queue.pop(0)
+            func(*args)
+
+    def _flush_all_idle(self, queue):
+        while queue:
+            self._flush_idle(queue, 1)
+
+    def _added_tile_games(self):
+        return [call.args[1] for call in GameTile.call_args_list]
+
+    def _mixed_library_games(self, tmpdir):
+        """Installed linux + windows-only rows mixed with not-installed linux titles.
+
+        Interleaving hidden-platform rows with shown ones is the shape that
+        skipped later linux titles when tiles were created in index chunks
+        while Windows rows were removed from the live list.
+        """
+        installed = Game(name="Installed Linux", game_id=1, install_dir=tmpdir, platform="linux")
+        linux_games = [
+            Game(name=f"Linux Game {i}", game_id=100 + i, platform="linux")
+            for i in range(4)
+        ]
+        windows = [
+            Game(name=f"Windows Only {i}", game_id=9000 + i, platform="windows")
+            for i in range(8)
+        ]
+        api_games = [
+            Game(name="Installed Linux", game_id=1, platform="linux"),
+            windows[0], windows[1], windows[2], windows[3],
+            linux_games[0],
+            windows[4],
+            linux_games[1],
+            windows[5],
+            linux_games[2],
+            windows[6], windows[7],
+            linux_games[3],
+        ]
+        return [installed], api_games, linux_games, windows
+
+    def test_update_library_does_not_skip_not_installed_linux_games(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            installed, api_games, expected_linux, _windows = self._mixed_library_games(tmpdir)
+            library = self._tile_library(installed, api_games)
+            library._Library__update_library()
+
+            added_ids = {game.id for game in self._added_tile_games()}
+            self.assertIn(installed[0].id, added_ids)
+            for game in expected_linux:
+                self.assertIn(game.id, added_ids, f"{game.name} should have a tile")
+
+    def test_update_library_removes_windows_only_games(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            installed, api_games, expected_linux, windows = self._mixed_library_games(tmpdir)
+            library = self._tile_library(installed, api_games)
+            library._Library__update_library()
+
+            remaining_ids = {game.id for game in library.games}
+            added_ids = {game.id for game in self._added_tile_games()}
+            for game in windows:
+                self.assertNotIn(game.id, remaining_ids)
+                self.assertNotIn(game.id, added_ids)
+            for game in expected_linux:
+                self.assertIn(game.id, remaining_ids)
+
+    def test_update_library_keeps_installed_windows_games(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            installed_windows = Game(
+                name="Installed Windows", game_id=42, install_dir=tmpdir, platform="windows"
+            )
+            api_windows = Game(name="Installed Windows", game_id=42, platform="windows")
+            downloadable_windows = Game(name="Uninstalled Windows", game_id=43, platform="windows")
+            library = self._tile_library([installed_windows], [api_windows, downloadable_windows])
+            library._Library__update_library()
+
+            remaining_ids = {game.id for game in library.games}
+            added_ids = {game.id for game in self._added_tile_games()}
+            self.assertIn(42, remaining_ids)
+            self.assertIn(42, added_ids)
+            self.assertNotIn(43, remaining_ids)
+            self.assertNotIn(43, added_ids)
+
+    def test_update_library_applies_installed_before_api(self):
+        idle_queue = []
+        events = []
+
+        def queue_idle(func, *args):
+            events.append(func)
+            idle_queue.append((func, args))
+            return 0
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            installed, api_games, expected_linux, windows = self._mixed_library_games(tmpdir)
+            library = self._tile_library(installed, api_games)
+            library.api.get_library.side_effect = lambda: (events.append("api"), (api_games, ""))[1]
+            apply_installed = library._Library__create_gametiles
+            with patch.object(library_module.GLib, "idle_add", side_effect=queue_idle):
+                library._Library__update_library()
+                self._flush_idle(idle_queue, 1)  # __load_tile_states
+
+                self.assertIn("api", events)
+                self.assertLess(events.index(apply_installed), events.index("api"))
+
+                self._flush_idle(idle_queue, 1)
+                self.assertEqual(installed, self._added_tile_games())
+
+                self._flush_idle(idle_queue, 1)
+                added_after_installed = self._added_tile_games()
+                self.assertEqual([installed[0].id], [game.id for game in added_after_installed])
+                for game in expected_linux:
+                    self.assertNotIn(game.id, {g.id for g in added_after_installed})
+
+                self._flush_idle(idle_queue, 1)
+                self._flush_all_idle(idle_queue)
+                added_after_api = self._added_tile_games()
+                added_ids = {game.id for game in added_after_api}
+                self.assertEqual(1 + len(expected_linux), len(added_after_api))
+                for game in expected_linux:
+                    self.assertIn(game.id, added_ids)
+                for game in windows:
+                    self.assertNotIn(game.id, added_ids)
+                self.assertEqual([], idle_queue)
 
 
 del sys.modules['gi']

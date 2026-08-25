@@ -4,9 +4,10 @@ from unittest.mock import MagicMock
 class MockGiRepository:
 
     class Gtk:
-        Widget = MagicMock()
-        Settings = MagicMock()
+        AboutDialog = MagicMock()
         ResponseType = MagicMock()
+        Settings = MagicMock()
+        Widget = MagicMock()
 
         class ApplicationWindow:
             def __init__(self, title):
@@ -19,6 +20,12 @@ class MockGiRepository:
             pass
 
         class Dialog:
+            pass
+
+        class Switch:
+            pass
+
+        class SearchEntry:
             pass
 
         class Template:
@@ -52,6 +59,9 @@ class MockGiRepository:
         pass
 
     class GLib:
-        pass
+        @staticmethod
+        def idle_add(callback, *args):
+            callback(*args)
+            return 0
 
     Notify = MagicMock()
