@@ -10,6 +10,7 @@ from os.path import realpath, dirname, normpath
 import requests
 
 APPLICATION_NAME = "Minigalaxy"
+INSTALLER_REPO = None
 SHUTDOWN_DONE = False
 
 LAUNCH_PATH = dirname(realpath(__file__))
@@ -113,6 +114,7 @@ def main():
     session.headers.update({'User-Agent': 'Minigalaxy/{} (Linux {})'.format(VERSION, platform.machine())})
     api = Api(config, session)
     download_manager = DownloadManager(session, config)
+    INSTALLER_REPO = installer.InstallerRepository(config, api)
 
     window = Window(config, api, download_manager, APPLICATION_NAME)
 

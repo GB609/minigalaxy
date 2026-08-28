@@ -12,7 +12,7 @@ from minigalaxy.download_manager import DownloadState
 from minigalaxy.entity.state import State
 from minigalaxy.game import Game, InfoKey
 from minigalaxy.installer import uninstall_game, enqueue_game_install, check_diskspace, \
-    InstallerInventory, InstallResult, InstallResultType
+    InstallerInventory, InstallResult, InstallResultType, InstallableItem
 from minigalaxy.launcher import start_game, get_execute_commands
 from minigalaxy.paths import CACHE_DIR, DOWNLOAD_DIR, THUMBNAIL_DIR
 from minigalaxy.translation import _
@@ -150,7 +150,7 @@ class LibraryEntry:
         The is relevant when multiple DLC are in the queue when the cancel button on the GameTile is clicked.
         """
         if not gog_item:
-            gog_item = InstallableItem(self.game.id, self.game.name)
+            gog_item = InstallableItem.for_gog_item(self.api, self.game)
 
         question = _("Are you sure you want to cancel downloading {}?").format(gog_item.name)
         if self.parent_window.show_question(question):
@@ -237,13 +237,15 @@ class LibraryEntry:
         finish_func = self.__install_game
         result, download_info = self.get_download_info(self.game.platform)
         if result:
-            self._download(InstallableItem(self.game.id, self.game.name), download_info, DownloadType.GAME, finish_func)
+            installable_item = InstallableItem.for_gog_item(self.api, self.game)
+            self._download(installable_item, download_info, DownloadType.GAME, finish_func)
 
     def __download_update(self) -> None:
         finish_func = self.__install_update
         result, download_info = self.get_download_info(self.game.platform)
         if result:
-            self._download(InstallableItem(self.game.id, self.game.name), download_info, DownloadType.GAME_UPDATE, finish_func)
+            installable_item = InstallableItem.for_gog_item(self.api, self.game)
+            self._download(installable_item, download_info, DownloadType.GAME_UPDATE, finish_func)
 
     def __download_icon(self, force=False, game_info=None):
         local_name = self.game.get_cached_icon_path()
@@ -758,16 +760,6 @@ class LibraryEntry:
     '''----- END STATE HANDLING -----'''
 
 
-class InstallableItem:
-    """
-    Helper class to encapsulate several pieces of info used in several methods.
-    """
-
-    def __init__(self, item_id, name):
-        self.id = item_id
-        self.name = name
-
-
 class CallbackFuncWrapper:
 
     def __init__(self, item, finish_func, cancel_func, lib_entry, download_files, installer_inventory=None):
@@ -925,7 +917,8 @@ class DlcListEntry(Gtk.Box):
         self.dlc_installer = self.api.get_download_info(self.game, dlc_installers=info["downloads"]["installers"])
 
     def __run_download(self):
-        self.parent_entry._download(InstallableItem(self.dlc_id, self.title),
+        installable_item = InstallableItem.for_gog_item(self.api, self.game, self.dlc_id)
+        self.parent_entry._download(installable_item,
                                     self.dlc_installer,
                                     DownloadType.GAME_DLC,
                                     self.install,
