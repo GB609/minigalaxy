@@ -18,6 +18,7 @@ from importlib.resources import as_file
 from minigalaxy import Platform
 from minigalaxy.config import Config
 from minigalaxy.constants import GAME_LANGUAGE_IDS
+from minigalaxy.download import DownloadType
 from minigalaxy.file_info import FileInfo
 from minigalaxy.game import Game
 from minigalaxy.resources import get_data_file
@@ -27,6 +28,7 @@ from minigalaxy.paths import CACHE_DIR, THUMBNAIL_DIR, APPLICATIONS_DIR, DOWNLOA
 
 
 INSTALL_QUEUE = None
+INSTALLER_REPO = None
 
 
 def get_available_disk_space(location):
@@ -582,7 +584,7 @@ class InstallerInventory:
             self.set_path_once(installer_path)
 
     @staticmethod
-    def from_file_system(installer_executable_path):
+    def from_file_system(installer_executable_path, files_to_check=[]):
         """
         Helper utility to build an instance of InstallerInventory from files in the same directory
         as the file given with 'installer_executable_path'.
@@ -593,16 +595,21 @@ class InstallerInventory:
 
         The inventory will contain all files names matching the base name of the installer (without extension).
         Only files in the SAME directory are checked. No recursion.
+        It works with different game version, but result and behaviour are unspecified for mixed platform directories.
 
         This is a fallback for games that have been downloaded before InstallerInventory was introduced.
         Files added like this won't have checksums and the is_complete check makes little sense.
+
+        @param files_to_check: optional. Used as a performance optimization in situations where a directory is
+               iterated by the calling code as well.
         """
         inventory = InstallerInventory(installer_executable_path)
         if os.path.isfile(inventory.inventory_file):
             return inventory
 
         # if the file doesn't exist, populate from disk to get names at the very least
-        for f in os.listdir(inventory.directory):
+        directory_content = files_to_check if files_to_check else os.listdir(inventory.directory)
+        for f in directory_content:
             fullpath = os.path.join(inventory.directory, f)
             if os.path.isfile(fullpath) and f.startswith(inventory.name_prefix):
                 inventory.add_file(f, FileInfo(size=InstallerInventory.size_of(fullpath)))
@@ -613,20 +620,53 @@ class InstallerInventory:
     def size_of(file):
         return os.stat(file).st_size
 
+    @property
+    def item_id(self):
+        return self.meta.get('id', "")
+
+    @item_id.setter
+    def item_id(self, new_value: str) -> None:
+        self.meta['id'] = new_value
+
+    @property
+    def target_platform(self):
+        if not self.meta.get('platform', None):
+            platform = self.__detect_platform_type()
+            self.meta['platform'] = platform
+        return self.meta['platform']
+
+    @target_platform.setter
+    def target_platform(self, new_value: str) -> None:
+        self.meta['platform'] = new_value
+
+    @property
+    def version(self):
+        return self.meta.get('version', "")
+
+    @version.setter
+    def version(self, new_value: str) -> None:
+        self.meta['version'] = new_value
+
     def set_path_once(self, installer_path=None):
         if not self.inventory_file and installer_path:
             self.directory = os.path.dirname(installer_path)
             self.name_prefix = os.path.basename(os.path.splitext(installer_path)[0])
             self.inventory_file = os.path.join(self.directory, f"{self.name_prefix}.json")
             self.load()
+        if not self.target_platform and not self.contained_files():
+            self.target_platform = self.__detect_platform_type([installer_path])
 
     def load(self):
         if not os.path.isfile(self.inventory_file):
             self.data = {}
+            self.meta = {}
             return self.data
 
         with open(self.inventory_file, 'r') as inventory:
             self.data = json.load(inventory)
+            self.meta = self.data.get('%META%', {})
+            if self.meta:
+                del self.data['%META%']
 
         return self.data
 
@@ -635,7 +675,10 @@ class InstallerInventory:
             os.makedirs(self.directory, mode=0o755)
 
         with open(self.inventory_file, 'w') as inventory_file:
-            json.dump(self.data, inventory_file)
+            payload = self.data.copy()
+            payload['%META%'] = self.meta.copy()
+
+            json.dump(payload, inventory_file, indent=2)
 
     def add_file(self, name, file_info):
         self.data[os.path.basename(name)] = file_info.as_dict()
@@ -714,6 +757,144 @@ class InstallerInventory:
                 delete_list.append(os.path.join(self.directory, file))
 
         safe_delete(delete_list)
+
+    def __detect_platform_type(self, files=[]):
+        """Go over the list of files in the installer and determine OS based on file name endings.
+        @param files: optional. Uses the files contained in the installer by default.
+               Can be used in situations where the installer itself doesn't contain any files (yet)
+        """
+        if not files:
+            files = self.contained_files()
+        if filter(lambda n: n.endswith(".sh"), files):
+            return Platform.LINUX
+        if filter(lambda n: n.endswith(".exe") or n.endswith(".bin"), files):
+            return Platform.WINDOWS
+
+        return None
+
+
+class InstallableItem:
+    """Helper class used to generalize handling of Game and DLC downloads."""
+
+    def __init__(self, item_id, name, base_slug, slug, platform: Platform, item_type: DownloadType, base_dir, sub_path=""):
+        self.id = item_id
+        self.name = name
+        self.platform = platform
+        self.base_slug = base_slug
+        self.slug = slug
+        self.installer_base_dir = base_dir
+        self.installer_sub_path = sub_path
+        self.item_type = item_type
+
+    @staticmethod
+    def for_gog_item(api, game: Game, dlc_id=None):
+        if dlc_id:
+            product_info = api.get_dlc_info(game, dlc_id)
+            sub_path = Game.strip_string(product_info["title"], True)
+            item_type = DownloadType.GAME_DLC
+        else:
+            product_info = api.get_info(game)
+            sub_path = ""
+            item_type = DownloadType.GAME
+
+        return InstallableItem(
+            item_id=product_info["id"],
+            name=product_info["title"],
+            base_slug=game.slug,
+            slug=product_info["slug"],
+            platform=game.platform,
+            item_type=item_type,
+            base_dir=game.get_install_directory_name(),
+            sub_path=sub_path
+        )
+
+
+class InstallerRepository:
+    """This class serves as a centralized point for managing installers, their downloads and checks about them"""
+
+    # cache installers as they might be checked for existence several times and searching through files is expensive
+    known_installers = {}
+
+    def __init__(self, config: Config, api):
+        self.config = config
+        self.api = api
+
+    def locate_usable_installer(self, gog_item: InstallableItem):
+        """Look through several installer download paths and the configured default to find a usable installer."""
+        return self.__get_cached(gog_item, gog_item.platform, self.__search_working_installer, gog_item)
+
+    def __get_cached(self, gog_item: InstallableItem, platform: Platform, installer_provider):
+        """Look for a pre-cached piece of data. If not there, call installer_provider to search for it.
+        The call is made lazily like this (instead of passing the a search result as default) to avoid needless lookups.
+        """
+        cache_key = f"{platform}:{gog_item.id}"
+        if cache_key in InstallerRepository.known_installers:
+            return InstallerRepository.known_installers.get(cache_key)
+        installer = installer_provider(gog_item, platform)
+        if installer:
+            InstallerRepository.known_installers[cache_key] = installer
+        return installer
+
+    def __search_working_installer(self, gog_item: InstallableItem, target_platform: Platform):
+        if self.config.keep_installers and self.config.install_dir:
+            install_repo_dir = self.config.install_dir
+        else:
+            install_repo_dir = DOWNLOAD_DIR
+
+        # an empty installer_sub_path is neutral in path.join (=doesn't add another subpath)
+        lookup_candidates = [
+            os.path.join(install_repo_dir, gog_item.base_slug, gog_item.platform, gog_item.installer_sub_path),
+            os.path.join(install_repo_dir, gog_item.installer_base_dir, gog_item.installer_sub_path)
+        ]
+
+        installer = None
+        for repo_path in lookup_candidates:
+            logging.debug("Searching [{}] for installer files", repo_path)
+            installer = self.__scan_directory(repo_path, target_platform)
+            if installer:
+                logging.debug("Found [{}]", installer.inventory_file)
+                return installer
+
+    def __scan_directory(self, path_to_scan, game_platform, use_fallback=False) -> InstallerInventory:
+        """Go through the contents of a directory trying to load an InstallerInventory for 'target_platform' from it.
+        This methods searches only for '.json' files by default and only returns most recent 'complete' one found.
+        @param use_fallback: For rare situations where scanning for old downloads is required.
+        """
+        if not os.path.isdir(path_to_scan):
+            return None
+
+        exes_by_creation_date = {}
+        dir_content = os.listdir(path_to_scan)
+        for dir_child in dir_content:
+            installer_candidate = os.path.join(path_to_scan, dir_child)
+            if self.is_installer_candidate(installer_candidate, use_fallback):
+                exes_by_creation_date[int(os.path.getmtime(installer_candidate))] = installer_candidate
+
+        if not exes_by_creation_date:
+            return None
+
+        ctimes_sorted = [*exes_by_creation_date.keys()]
+        ctimes_sorted.sort()
+        for creation_time in ctimes_sorted:
+            inventory = InstallerInventory.from_file_system(exes_by_creation_date[creation_time], dir_content)
+            if inventory.target_platform == game_platform and inventory.is_complete():
+                return inventory
+
+        return None
+
+    @staticmethod
+    def is_installer_candidate(self, path, use_fallback=False):
+        """Check if a file might represent a valid installer. To be used as a filter when going over directory contents.
+        Minigalaxy expects all valid installers to be represented by a dedicated '.json'
+        (which was created by Minigalaxy when download the files).
+        The fallback to also check '.sh' or '.exe' is primarily meant for repo migrations and to detect partial downloads.
+        """
+        if not os.path.isfile(path):
+            return False
+        extension = os.path.splitext(path)
+        if use_fallback:
+            return extension[-1] in [".json", ".exe", ".sh"]
+        return extension[-1] in [".json"]
 
 
 class InstallResultType(Enum):

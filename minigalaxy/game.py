@@ -224,6 +224,7 @@ class Game:
         self.image_url = other_game.image_url
         self.url = other_game.url
         self.category = other_game.category
+        self.slug = other_game.slug
 
     @property
     def product_info(self) -> dict:

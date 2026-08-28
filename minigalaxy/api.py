@@ -120,6 +120,7 @@ class Api:
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
                         image_url=product["image"], platform=Platform.WINDOWS, category=product.get("category", None))
+            game.slug = product.get("slug", game.id)
             game_list.append(game)
 
     def __filter_games_with_valid_platforms(self, games):

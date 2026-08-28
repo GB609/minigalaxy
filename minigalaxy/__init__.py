@@ -2,6 +2,9 @@
 from enum import Enum
 
 
+INSTALLER_REPO = None
+
+
 class Platform(str, Enum):
     """
     This enum represents a fundamental data type of minigalaxy: the target platform of a game.

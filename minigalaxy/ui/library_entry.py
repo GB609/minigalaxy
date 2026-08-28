@@ -5,14 +5,14 @@ import shutil
 import threading
 import urllib.parse
 
-from minigalaxy import Platform
+from minigalaxy import INSTALLER_REPO, Platform
 from minigalaxy.api import NoDownloadLinkFound
 from minigalaxy.download import CombinedProgressWatcher, Download, DownloadType
 from minigalaxy.download_manager import DownloadState
 from minigalaxy.entity.state import State
 from minigalaxy.game import Game, InfoKey
 from minigalaxy.installer import uninstall_game, enqueue_game_install, check_diskspace, \
-    InstallerInventory, InstallResult, InstallResultType
+    InstallerInventory, InstallResult, InstallResultType, InstallableItem
 from minigalaxy.launcher import start_game, get_execute_commands
 from minigalaxy.paths import CACHE_DIR, DOWNLOAD_DIR, THUMBNAIL_DIR
 from minigalaxy.translation import _
@@ -118,7 +118,7 @@ class LibraryEntry:
         elif self.current_state in [State.INSTALLED, State.UPDATABLE]:
             err_msg = self.launch_game()
         elif self.current_state == State.INSTALLABLE:
-            install_thread = threading.Thread(target=self.__install_game, args=(self.get_keep_executable_path(),))
+            install_thread = threading.Thread(target=self.__install_game, args=(self.locate_installer(),))
             install_thread.start()
         elif self.current_state == State.DOWNLOADABLE:
             download_thread = threading.Thread(target=self.__download_game)
@@ -150,7 +150,7 @@ class LibraryEntry:
         The is relevant when multiple DLC are in the queue when the cancel button on the GameTile is clicked.
         """
         if not gog_item:
-            gog_item = InstallableItem(self.game.id, self.game.name)
+            gog_item = InstallableItem.for_gog_item(self.api, self.game)
 
         question = _("Are you sure you want to cancel downloading {}?").format(gog_item.name)
         if self.parent_window.show_question(question):
@@ -194,8 +194,9 @@ class LibraryEntry:
         download_thread = threading.Thread(target=self.__download_update)
         download_thread.start()
 
-    def get_keep_executable_path(self):
-        keep_path = ""
+    def locate_installer(self):
+        return INSTALLER_REPO.locate_usable_installer(self.game)
+        """keep_path = ""
         exes_by_creation_date = {}
         if os.path.isdir(self.keep_path):
             for dir_content in os.listdir(self.keep_path):
@@ -212,7 +213,7 @@ class LibraryEntry:
                 if inventory.is_complete():
                     return installer
 
-        return keep_path
+        return keep_path"""
 
     @staticmethod
     def is_executable(file):
@@ -237,13 +238,15 @@ class LibraryEntry:
         finish_func = self.__install_game
         result, download_info = self.get_download_info(self.game.platform)
         if result:
-            self._download(InstallableItem(self.game.id, self.game.name), download_info, DownloadType.GAME, finish_func)
+            installable_item = InstallableItem.for_gog_item(self.api, self.game)
+            self._download(installable_item, download_info, DownloadType.GAME, finish_func)
 
     def __download_update(self) -> None:
         finish_func = self.__install_update
         result, download_info = self.get_download_info(self.game.platform)
         if result:
-            self._download(InstallableItem(self.game.id, self.game.name), download_info, DownloadType.GAME_UPDATE, finish_func)
+            installable_item = InstallableItem.for_gog_item(self.api, self.game)
+            self._download(installable_item, download_info, DownloadType.GAME_UPDATE, finish_func)
 
     def __download_icon(self, force=False, game_info=None):
         local_name = self.game.get_cached_icon_path()
@@ -358,7 +361,7 @@ class LibraryEntry:
 
     '''----- INSTALL ACTIONS -----'''
 
-    def __install_game(self, save_location, inventory=None):
+    def __install_game(self, inventory: InstallerInventory):
         self.game.set_install_dir(self.config.install_dir)
 
         def on_success():
@@ -367,9 +370,9 @@ class LibraryEntry:
             popup.show()
             self.__check_for_dlc(self.api.get_info(self.game))
 
-        self._install(self.game.id, save_location, inventory=inventory, on_success=on_success)
+        self._install(inventory=inventory, on_success=on_success)
 
-    def __install_update(self, save_location, inventory=None):
+    def __install_update(self, inventory: InstallerInventory):
 
         def on_success():
             image_tooltip = self.game.name
@@ -383,7 +386,7 @@ class LibraryEntry:
                 if dlc.is_update_available():
                     dlc.download()
 
-        self._install(self.game.id, save_location, update=True, inventory=inventory, on_success=on_success)
+        self._install(inventory=inventory, on_success=on_success, update=True)
 
     def __install_step_callback(self, result: InstallResult, on_success=None, on_failure=None, dlc_title=""):
         """
@@ -447,8 +450,8 @@ class LibraryEntry:
         if result.type is InstallResultType.INSTALL_START:
             self.update_to_state_if_idle(State.INSTALLING)
 
-    def _install(self, gog_item_id, save_location, update=False, dlc_title="",
-                 inventory=None, on_success=None, on_failure=None):
+    def _install(self, inventory: InstallerInventory, dlc_title="", update=False,
+                 on_success=None, on_failure=None):
         if not self.predownload_state:
             # when started from predownloaded local files
             self.predownload_state = self.current_state
@@ -462,12 +465,12 @@ class LibraryEntry:
 
         def install_finished(result):
             self.__install_step_callback(result, on_success, on_failure, dlc_title)
-
+        gog_item_id = inventory.item_id
         enqueue_game_install(
             gog_item_id,
             install_finished,
             self.game,
-            save_location,
+            save_location=None,  # FIXME: change
             self.config,
             installer_inventory=inventory
         )
@@ -613,7 +616,7 @@ class LibraryEntry:
             self.update_to_state(State.INSTALLED)
             check_update_thread = threading.Thread(target=self._check_for_update_dlc)
             check_update_thread.start()
-        elif self.get_keep_executable_path():
+        elif self.locate_installer():
             self.update_to_state(State.INSTALLABLE)
         else:
             self.update_to_state(State.DOWNLOADABLE)
@@ -753,16 +756,6 @@ class LibraryEntry:
             GLib.idle_add(self.reload_state)
 
     '''----- END STATE HANDLING -----'''
-
-
-class InstallableItem:
-    """
-    Helper class to encapsulate several pieces of info used in several methods.
-    """
-
-    def __init__(self, item_id, name):
-        self.id = item_id
-        self.name = name
 
 
 class CallbackFuncWrapper:
@@ -922,7 +915,8 @@ class DlcListEntry(Gtk.Box):
         self.dlc_installer = self.api.get_download_info(self.game, dlc_installers=info["downloads"]["installers"])
 
     def __run_download(self):
-        self.parent_entry._download(InstallableItem(self.dlc_id, self.title),
+        installable_item = InstallableItem.for_gog_item(self.api, self.game, self.dlc_id)
+        self.parent_entry._download(installable_item,
                                     self.dlc_installer,
                                     DownloadType.GAME_DLC,
                                     self.install,

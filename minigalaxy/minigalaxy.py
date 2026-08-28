@@ -113,6 +113,8 @@ def main():
     session.headers.update({'User-Agent': 'Minigalaxy/{} (Linux {})'.format(VERSION, platform.machine())})
     api = Api(config, session)
     download_manager = DownloadManager(session, config)
+    global INSTALLER_REPO
+    INSTALLER_REPO = installer.InstallerRepository(config, api)
 
     window = Window(config, api, download_manager, APPLICATION_NAME)
 
