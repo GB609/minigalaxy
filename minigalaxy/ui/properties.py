@@ -1,6 +1,7 @@
 import shutil
 import subprocess
 
+from minigalaxy import Platform
 from minigalaxy.config import Config
 from minigalaxy.game import InfoKey
 from minigalaxy.installer import create_applications_file
@@ -141,13 +142,13 @@ class Properties(Gtk.Dialog):
             self.entry_properties_variable.set_sensitive(False)
             self.entry_properties_command.set_sensitive(False)
 
-        if game.platform == 'linux':
+        if game.platform == Platform.LINUX:
             self.button_properties_regedit.hide()
             self.button_properties_winecfg.hide()
             self.button_properties_winetricks.hide()
             self.button_properties_wine.hide()
             self.button_properties_reset.hide()
             self.label_wine_custom.hide()
-        elif game.platform == 'windows':
+        elif game.platform == Platform.WINDOWS:
             self.button_properties_wine.set_sensitive(True)
             self.button_properties_reset.set_sensitive(True)

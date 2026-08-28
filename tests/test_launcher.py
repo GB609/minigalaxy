@@ -2,7 +2,7 @@ import subprocess
 from unittest import TestCase, mock
 from unittest.mock import MagicMock, mock_open
 
-from minigalaxy import launcher
+from minigalaxy import launcher, Platform
 from minigalaxy.game import Game
 from minigalaxy.launch_command import LaunchCommand
 
@@ -24,7 +24,7 @@ class Test(TestCase):
 
     def test3_determine_launcher_type(self):
         files = ['thumbnail.jpg', 'docs', 'support', 'unins000.exe', 'minigalaxy-dlc.json', 'gameinfo']
-        exp = "windows"
+        exp = Platform.WINDOWS
         obs = launcher.determine_launcher_type(files)
         self.assertEqual(exp, obs)
 

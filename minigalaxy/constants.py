@@ -1,3 +1,4 @@
+from minigalaxy import Platform
 from minigalaxy.translation import _
 
 SUPPORTED_DOWNLOAD_LANGUAGES = [
@@ -79,13 +80,14 @@ VIEWS = [
     ["list", _("List")],
 ]
 
+
 # PLATFORM_MODE controls which platforms/icons are visible
 # the order of values defines priority: the first value is used as default for install (when not overridden per game)
 PLATFORM_MODE = [
-    ["linux", _("Linux only")],
+    [Platform.LINUX, _("Linux only")],
     ["linux,windows", _("Prefer Linux")]
     # ["windows,linux", _("Prefer Windows")],
-    # ["windows", _("Windows only")]
+    # [Platform.WINDOWS, _("Windows only")]
 ]
 
 # Game IDs to ignore when received by the API

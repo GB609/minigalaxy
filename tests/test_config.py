@@ -1,6 +1,7 @@
 from unittest import TestCase
 from unittest.mock import MagicMock, patch, mock_open
 
+from minigalaxy import Platform
 from minigalaxy.config import Config
 from minigalaxy.paths import DEFAULT_INSTALL_DIR
 
@@ -124,7 +125,7 @@ class TestConfig(TestCase):
             ["show_hidden_games", False, True],
             # NOTE: platform_mode getter/setter work on incompatible types
             # can not be tested here with the regular simple test loop
-            # ["platform_mode", ["linux"], "windows,linux"]
+            # ["platform_mode", [Platform.LINUX], "windows,linux"]
             ["keep_window_maximized", False, True],
             ["installed_filter", False, True],
             ["create_applications_file", False, True],
@@ -193,13 +194,13 @@ class TestConfig(TestCase):
 
     def test_platform_mode(self):
         # default value
-        self.assertEqual(["linux"], self.config.platform_mode)
+        self.assertEqual([Platform.LINUX], self.config.platform_mode)
 
         # set new value as string
         self.config.platform_mode = "windows,linux"
-        self.assertEqual(["windows", "linux"], self.config.platform_mode)
+        self.assertEqual([Platform.WINDOWS, Platform.LINUX], self.config.platform_mode)
 
         # platform mode also (optionally) takes a list of strings for convenience in code
         # this test can't use the getter, because that automatically wraps back to list
-        self.config.platform_mode = ["linux", "windows"]
+        self.config.platform_mode = [Platform.LINUX, Platform.WINDOWS]
         self.assertEqual("linux,windows", self.config._Config__config["platform_mode"])

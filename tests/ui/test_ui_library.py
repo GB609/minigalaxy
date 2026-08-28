@@ -6,6 +6,7 @@ from unittest import TestCase, mock
 from unittest.mock import MagicMock, patch, mock_open
 import tempfile
 from tests.ui import MockGiRepository
+from minigalaxy import Platform
 
 m_gtk = MagicMock()
 m_gi = MagicMock()
@@ -252,7 +253,7 @@ class TestLibrary(TestCase):
         config = MagicMock()
         config.locale = "en"
         config.installed_filter = False
-        config.platform_mode = ["linux"]
+        config.platform_mode = [Platform.LINUX]
         config.view = "grid"
         config.current_downloads = []
         config.show_hidden_games = True
@@ -288,17 +289,17 @@ class TestLibrary(TestCase):
         skipped later linux titles when tiles were created in index chunks
         while Windows rows were removed from the live list.
         """
-        installed = Game(name="Installed Linux", game_id=1, install_dir=tmpdir, platform="linux")
+        installed = Game(name="Installed Linux", game_id=1, install_dir=tmpdir, platform=Platform.LINUX)
         linux_games = [
-            Game(name=f"Linux Game {i}", game_id=100 + i, platform="linux")
+            Game(name=f"Linux Game {i}", game_id=100 + i, platform=Platform.LINUX)
             for i in range(4)
         ]
         windows = [
-            Game(name=f"Windows Only {i}", game_id=9000 + i, platform="windows")
+            Game(name=f"Windows Only {i}", game_id=9000 + i, platform=Platform.WINDOWS)
             for i in range(8)
         ]
         api_games = [
-            Game(name="Installed Linux", game_id=1, platform="linux"),
+            Game(name="Installed Linux", game_id=1, platform=Platform.LINUX),
             windows[0], windows[1], windows[2], windows[3],
             linux_games[0],
             windows[4],
@@ -338,10 +339,10 @@ class TestLibrary(TestCase):
     def test_update_library_keeps_installed_windows_games(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             installed_windows = Game(
-                name="Installed Windows", game_id=42, install_dir=tmpdir, platform="windows"
+                name="Installed Windows", game_id=42, install_dir=tmpdir, platform=Platform.WINDOWS
             )
-            api_windows = Game(name="Installed Windows", game_id=42, platform="windows")
-            downloadable_windows = Game(name="Uninstalled Windows", game_id=43, platform="windows")
+            api_windows = Game(name="Installed Windows", game_id=42, platform=Platform.WINDOWS)
+            downloadable_windows = Game(name="Uninstalled Windows", game_id=43, platform=Platform.WINDOWS)
             library = self._tile_library([installed_windows], [api_windows, downloadable_windows])
             library._Library__update_library()
 

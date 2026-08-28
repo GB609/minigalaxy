@@ -5,6 +5,7 @@ import shutil
 import threading
 import urllib.parse
 
+from minigalaxy import Platform
 from minigalaxy.api import NoDownloadLinkFound
 from minigalaxy.download import CombinedProgressWatcher, Download, DownloadType
 from minigalaxy.download_manager import DownloadState
@@ -217,7 +218,7 @@ class LibraryEntry:
     def is_executable(file):
         return os.path.isfile(file) and (os.access(file, os.X_OK) or os.path.splitext(file)[-1] in [".exe", ".sh"])
 
-    def get_download_info(self, platform="linux"):
+    def get_download_info(self, platform=Platform.LINUX):
         try:
             download_info = self.api.get_download_info(self.game, platform)
             result = True
@@ -372,7 +373,7 @@ class LibraryEntry:
 
         def on_success():
             image_tooltip = self.game.name
-            if self.game.platform == "windows":
+            if self.game.platform == Platform.WINDOWS:
                 image_tooltip += " (Wine)"
 
             self.__set_image_tooltip(image_tooltip)
@@ -716,7 +717,7 @@ class LibraryEntry:
 
         self.update_visible_widgets(self.menu_button_update, self.menu_button_uninstall, info_buttons=True)
 
-        tooltip_text = "{} (update{})".format(self.game.name, ", Wine" if self.game.platform == "windows" else "")
+        tooltip_text = "{} (update{})".format(self.game.name, ", Wine" if self.game.platform == Platform.WINDOWS else "")
         self.image.set_tooltip_text(tooltip_text)
 
     def state_updating(self):
