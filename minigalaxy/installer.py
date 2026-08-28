@@ -573,23 +573,22 @@ class InstallerInventory:
             self.set_path_once(installer_path)
 
     @staticmethod
-    def from_file_system(installer_path):
+    def from_file_system(installer_executable_path):
         """
         Helper utility to build an instance of InstallerInventory from files in the same directory
-        that belong to the given installer_path.
+        as the file given with 'installer_executable_path'.
         Expects the following naming convention:
         - game_installer_version.[exe|sh]
         - game_installer_version-1.bin
         - game_installer_version-2.bin ...
 
-        The inventory will contain all files whose names are matching
-        the base name of the installer (without extension) in the SAME directory.
-        No recursion.
+        The inventory will contain all files names matching the base name of the installer (without extension).
+        Only files in the SAME directory are checked. No recursion.
 
         This is a fallback for games that have been downloaded before InstallerInventory was introduced.
         Files added like this won't have checksums and the is_complete check makes little sense.
         """
-        inventory = InstallerInventory(installer_path)
+        inventory = InstallerInventory(installer_executable_path)
         if os.path.isfile(inventory.inventory_file):
             return inventory
 
@@ -726,6 +725,7 @@ class InstallResultType(Enum):
 
 
 class InstallResult:
+
     def __init__(self, install_id, result_type: InstallResultType, reason, details=None):
         """Data class that will be passed to result_callback of InstallTask
         reason is a type-dependent string:
@@ -762,6 +762,7 @@ class InstallResult:
 
 
 class InstallException(Exception):
+
     def __init__(self, message, fail_type=InstallResultType.FAILURE, data=None):
         self.fail_type = fail_type
         self.message = message
@@ -769,6 +770,7 @@ class InstallException(Exception):
 
 
 class InstallTask:
+
     def __init__(self, install_id=None, result_callback=None, *args, **kwargs):
         self.game = InstallTask.__locate_game_in_args(*args, **kwargs)
         if not install_id:
