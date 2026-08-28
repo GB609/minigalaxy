@@ -442,39 +442,6 @@ class Test(TestCase):
         result2 = installer.get_exec_line(game2)
         self.assertEqual('"/home/test/GOG Games/Blocks That Matter/start.sh"', result2)
 
-    @mock.patch('os.path.getsize')
-    @mock.patch('os.listdir')
-    @mock.patch('os.path.isdir')
-    def test_compare_directory_true(self, mock_path_isdir, mock_list_dir, mock_os_path_getsize):
-        mock_path_isdir.return_value = True
-        mock_list_dir.return_value = ["beneath_a_steel_sky_en_gog_2_20150.sh", "beneath_a_steel_sky_en_gog_2_20150.part1"]
-        mock_os_path_getsize.return_value = 100
-
-        obs = installer.compare_directories("/home/test/.cache/minigalaxy/installer/test", "/home/test/GOG Games/installer/test")
-        self.assertEqual(obs, True)
-
-    @mock.patch('os.path.getsize')
-    @mock.patch('os.listdir')
-    @mock.patch('os.path.isdir')
-    def test_compare_directory_false(self, mock_path_isdir, mock_list_dir, mock_os_path_getsize):
-        mock_path_isdir.return_value = True
-        mock_list_dir.side_effect = [
-            ["beneath_a_steel_sky_en_gog_2_20150.sh", "beneath_a_steel_sky_en_gog_2_20150.part1"],
-            ["beneath_a_steel_sky_en_gog_2_20150.sh"],
-        ]
-
-        obs = installer.compare_directories("/home/test/.cache/minigalaxy/installer/test", "/home/test/GOG Games/installer/test")
-        self.assertEqual(obs, False)
-
-        mock_list_dir.side_effect = [
-            ["beneath_a_steel_sky_en_gog_2_20150.sh", "beneath_a_steel_sky_en_gog_2_20150.part1"],
-            ["beneath_a_steel_sky_en_gog_2_20150.sh", "beneath_a_steel_sky_en_gog_2_20150.part1"],
-        ]
-        mock_os_path_getsize.side_effect = [100, 200, 300, 400]
-
-        obs = installer.compare_directories("/home/test/.cache/minigalaxy/installer/test", "/home/test/GOG Games/installer/test")
-        self.assertEqual(obs, False)
-
     def test_remove_installer_no_installer(self):
         """
         No installer present

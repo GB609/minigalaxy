@@ -396,27 +396,6 @@ def create_applications_file(game, override=False):
     return error_message
 
 
-def compare_directories(dir1, dir2):
-    files_1 = []
-    files_2 = []
-
-    if os.path.isdir(dir1):
-        files_1 = os.listdir(dir1)
-    if os.path.isdir(dir2):
-        files_2 = os.listdir(dir2)
-
-    if not set(files_1).issubset(set(files_2)):
-        return False
-
-    result = True
-    for f in files_1:
-        if os.path.getsize(os.path.join(dir1, f)) != \
-           os.path.getsize(os.path.join(dir2, f)):
-            result = False
-
-    return result
-
-
 def remove_installer(game: Game, installer: str, keep_installers_dir: str, keep_installers: bool, inventory=None):
     installer_dir = os.path.dirname(installer)
     if not os.path.isdir(installer_dir):
