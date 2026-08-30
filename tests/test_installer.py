@@ -5,6 +5,7 @@ import os
 from unittest import TestCase, mock
 from unittest.mock import patch, mock_open, MagicMock, call
 
+from minigalaxy import Platform
 from minigalaxy.file_info import FileInfo
 from minigalaxy.game import Game
 from minigalaxy import installer
@@ -18,7 +19,7 @@ class Test(TestCase):
     def test_install_game(self, mock_exists, mock_listdir):
         """[scenario: unhandled error]"""
         mock_exists.side_effect = FileNotFoundError("Testing unhandled errors during install")
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         exp = "Unhandled error."
         obs = installer.install_game(game, installer="", language="", install_dir="", keep_installers=False, create_desktop_file=True)
         self.assertEqual(exp, obs)
@@ -28,7 +29,7 @@ class Test(TestCase):
         '''[scenario: install_game with raise_error=True uses raise instead of return - checksum failure variant]'''
         failed_file_list = {"/cache/adrift_setup-1.bin": "md5abc"}
         mock_checksum.side_effect = installer.InstallException("Checksum Error", installer.InstallResultType.CHECKSUM_ERROR, failed_file_list)
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
 
         inventory = self.prepare_inventory("/cache/adrift_setup.exe", "", 0)
         inventory.add_file("/cache/adrift_setup-1.bin", FileInfo("", 0))
@@ -46,7 +47,7 @@ class Test(TestCase):
         '''[scenario: install_game with raise_error=True uses raise instead of return - regular failure variant]'''
         mock_disk_check.return_value = "disk_full"
 
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
 
         progress_callback = MagicMock()
 
@@ -136,7 +137,7 @@ class Test(TestCase):
             inventory.verify_checksum(os.path.basename(f), "calculated_stuff")
 
         mock_checksum.side_effect = installer.InstallException("Checksum Error", installer.InstallResultType.CHECKSUM_ERROR, failed_file_list)
-        game = Game("Absolute Drift", install_dir=install_dir, platform="windows")
+        game = Game("Absolute Drift", install_dir=install_dir, platform=Platform.WINDOWS)
 
         with self.assertRaises(installer.InstallException):
             installer.install_game(game, installer="", language="", install_dir=install_dir,
@@ -249,7 +250,7 @@ class Test(TestCase):
         mock_which.return_value = False
         mock_exists.return_value = True
         installer_path = "/home/makson/.cache/minigalaxy/download/Absolute Drift/setup_absolute_drift_1.0f_(64bit)_(47863).exe"
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         exp = "en-US"
         # check that lang passed to the wine installer is set up correctly
         mock_wine_extract.side_effect = lambda game, installer, lang: self.assertEqual(exp, lang)
@@ -299,7 +300,7 @@ class Test(TestCase):
         mock_subprocess().poll.return_value = 0
         mock_subprocess().stdout.readline.return_value = ""
         mock_subprocess().stderr.readline.return_value = ""
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         installer_path = "/home/makson/.cache/minigalaxy/download/Absolute Drift/setup_absolute_drift_1.0f_(64bit)_(47863).exe"
         temp_dir = "/home/makson/.cache/minigalaxy/extract/1136126792"
         exp = ""
@@ -316,7 +317,7 @@ class Test(TestCase):
         mock_subprocess().poll.return_value = 1
         mock_subprocess().stdout.readline.return_value = ""
         mock_subprocess().stderr.readline.return_value = ""
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         installer_path = "/home/makson/.cache/minigalaxy/download/Absolute Drift/setup_absolute_drift_1.0f_(64bit)_(47863).exe"
         temp_dir = "/home/makson/.cache/minigalaxy/extract/1136126792"
         exp = "Wine extraction failed."
@@ -400,7 +401,7 @@ class Test(TestCase):
         backup_installer = copy.deepcopy(installer.get_game_size_from_unzip)
         installer.get_game_size_from_unzip = MagicMock()
         installer.get_game_size_from_unzip.return_value = 524288000
-        game = Game("Beneath A Steel Sky", install_dir="/home/makson/GOG Games/Beneath a Steel Sky", platform="linux")
+        game = Game("Beneath A Steel Sky", install_dir="/home/makson/GOG Games/Beneath a Steel Sky", platform=Platform.LINUX)
         installer_file = "/beneath_a_steel_sky_en_gog_2_20150.sh"
         exp = "Not enough space to extract game. Required: 524288000 Available: 121647104"
         obs = installer.verify_disk_space(game, installer_file)
@@ -430,13 +431,13 @@ class Test(TestCase):
     def test_get_exec_line(self, mock_list_dir, mock_which):
         mock_which.return_value = True
 
-        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform="linux")
+        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform=Platform.LINUX)
         mock_list_dir.return_value = ["data", "docs", "scummvm", "support", "beneath.ini", "gameinfo", "start.sh"]
 
         result1 = installer.get_exec_line(game1)
         self.assertEqual("scummvm -c beneath.ini", result1)
 
-        game2 = Game("Blocks That Matter", install_dir="/home/test/GOG Games/Blocks That Matter", platform="linux")
+        game2 = Game("Blocks That Matter", install_dir="/home/test/GOG Games/Blocks That Matter", platform=Platform.LINUX)
         mock_list_dir.return_value = ["data", "docs", "support", "gameinfo", "start.sh"]
 
         result2 = installer.get_exec_line(game2)
@@ -446,7 +447,7 @@ class Test(TestCase):
         """
         No installer present
         """
-        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform="linux")
+        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform=Platform.LINUX)
         installer_path = "/home/i/.cache/minigalaxy/download/Beneath a Steel Sky/beneath_a_steel_sky_en_gog_2_20150.sh"
         obs = installer.remove_installer(game1, installer_path, "/this/is/a/fake/directory", False)
         exp = "No installer directory is present: /home/i/.cache/minigalaxy/download/Beneath a Steel Sky"
@@ -472,7 +473,7 @@ class Test(TestCase):
 
         self.setup_os_mocks(list_dir_returns, mock_listdir, mock_rmdir, mock_isfile, mock_remove, mock_isempty, mock_isdir)
 
-        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform="linux")
+        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform=Platform.LINUX)
         installer_path = "/home/i/.cache/minigalaxy/download/Beneath a Steel Sky/beneath_a_steel_sky_en_gog_2_20150.sh"
         obs = installer.remove_installer(game1, installer_path, "/some/directory/test", False)
 
@@ -502,7 +503,7 @@ class Test(TestCase):
         '''
         self.setup_os_mocks(list_dir_returns, mock_listdir, mock_rmdir, mock_isfile, mock_remove, mock_isempty, mock_isdir)
 
-        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform="linux")
+        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath a Steel Sky", platform=Platform.LINUX)
         installer_path = "/home/i/GOG Games/installer/Beneath a Steel Sky/beneath_a_steel_sky_en_gog_2_20150.sh"
         obs = installer.remove_installer(game1, installer_path, "/home/i/GOG Games/installer", True)
         assert not mock_remove.called
@@ -529,7 +530,7 @@ class Test(TestCase):
 
         self.setup_os_mocks(list_dir_returns, mock_listdir, mock_rmdir, mock_isfile, mock_remove, mock_isempty, mock_isdir)
 
-        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath A Steel Sky", platform="linux")
+        game1 = Game("Beneath A Steel Sky", install_dir="/home/test/GOG Games/Beneath A Steel Sky", platform=Platform.LINUX)
         installer_path = "/home/i/GOG Games/installer/Beneath A Steel Sky/beneath_a_steel_sky_en_gog_2_20150.sh"
         obs = installer.remove_installer(game1, installer_path, "/home/i/GOG Games/installer", False)
 

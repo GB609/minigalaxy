@@ -4,8 +4,8 @@ from unittest import TestCase, mock
 from unittest.mock import MagicMock
 from threading import RLock, Thread
 
+from minigalaxy import installer, Platform
 from minigalaxy.game import Game
-from minigalaxy import installer
 
 
 class Test(TestCase):
@@ -84,7 +84,7 @@ class Test(TestCase):
         installer.INSTALL_QUEUE = None
         result_callback = MagicMock()
 
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         installer.enqueue_game_install(12345, result_callback,
                                        game, installer="adrift.exe", language="", install_dir="",
                                        keep_installers=False, create_desktop_file=True)
@@ -104,7 +104,7 @@ class Test(TestCase):
         result_callback = MagicMock()
         mock_install.side_effect = installer.InstallException("error")
 
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         installer.enqueue_game_install(12345, result_callback,
                                        game, installer="adrift.exe", language="", install_dir="",
                                        keep_installers=False, create_desktop_file=True)
@@ -119,7 +119,7 @@ class Test(TestCase):
     def test_InstallTask_init_requires_callback(self):
         '''[scenario: InstallTask__init__ enforces result_callback to be a callable]'''
 
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
         with self.assertRaises(ValueError) as cm:
             installer.InstallTask(815, "not-a-callable", game)
         # the search for a Game instance happens before the check of callback, so assert the message as well
@@ -130,7 +130,7 @@ class Test(TestCase):
 
         def callback(): pass
 
-        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform="windows")
+        game = Game("Absolute Drift", install_dir="/home/makson/GOG Games/Absolute Drift", platform=Platform.WINDOWS)
 
         with self.assertRaises(ValueError) as cm:
             installer.InstallTask(815, callback)

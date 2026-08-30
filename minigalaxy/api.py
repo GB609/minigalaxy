@@ -10,7 +10,7 @@ from requests import Session
 
 from minigalaxy.file_info import FileInfo
 from minigalaxy.game import Game
-from minigalaxy.constants import IGNORE_GAME_IDS
+from minigalaxy.constants import IGNORE_GAME_IDS, Platform
 from minigalaxy.config import Config
 
 
@@ -119,7 +119,7 @@ class Api:
                 logging.warning("%s (%s) has no store page url", product["title"], product['id'])
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
-                        image_url=product["image"], platform="windows", category=product.get("category", None))
+                        image_url=product["image"], platform=Platform.WINDOWS, category=product.get("category", None))
             game_list.append(game)
 
     def __filter_games_with_valid_platforms(self, games):
@@ -171,10 +171,10 @@ class Api:
         for installer in product["downloads"]["installers"]:
             if 'os' in installer:
                 compat[installer['os']] = True
-        if compat.get("linux", False):
-            return "linux"
-        if compat.get("windows", False):
-            return "windows"
+        if compat.get(Platform.LINUX, False):
+            return Platform.LINUX
+        if compat.get(Platform.WINDOWS, False):
+            return Platform.WINDOWS
 
         logging.warning("%s has no platform information - skip", product["title"])
         return None
@@ -222,7 +222,7 @@ class Api:
                 return dlc
 
     # This returns a unique download url and a link to the checksum of the download
-    def get_download_info(self, game: Game, operating_system="linux", dlc_installers="", dlc_id="") -> dict:
+    def get_download_info(self, game: Game, operating_system=Platform.LINUX, dlc_installers="", dlc_id="") -> dict:
         if dlc_installers:
             installers = dlc_installers
         elif dlc_id:
@@ -236,8 +236,8 @@ class Api:
             if installer["os"] == operating_system:
                 possible_downloads.append(installer)
         if not possible_downloads:
-            if operating_system == "linux":
-                return self.get_download_info(game, "windows", dlc_installers)
+            if operating_system == Platform.LINUX:
+                return self.get_download_info(game, Platform.WINDOWS, dlc_installers)
             else:
                 raise NoDownloadLinkFound("Error: {} with id {} couldn't be installed".format(game.name, game.id))
 

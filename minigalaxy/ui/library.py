@@ -6,6 +6,7 @@ import re
 import threading
 import time
 
+from minigalaxy import Platform
 from minigalaxy.api import Api
 from minigalaxy.config import Config
 from minigalaxy.download_manager import DownloadManager
@@ -291,7 +292,7 @@ def get_installed_windows_games(full_path, game_categories_dict=None):
                     name=info["name"],
                     game_id=int(info["gameId"]),
                     install_dir=full_path,
-                    platform="windows",
+                    platform=Platform.WINDOWS,
                     category=(game_categories_dict or {}).get(info["name"], "")
                 )
                 games.append(game)

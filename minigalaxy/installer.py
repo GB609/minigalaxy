@@ -15,6 +15,7 @@ from queue import Empty
 from threading import Thread, RLock
 from importlib.resources import as_file
 
+from minigalaxy import Platform
 from minigalaxy.config import Config
 from minigalaxy.constants import GAME_LANGUAGE_IDS
 from minigalaxy.file_info import FileInfo
@@ -181,7 +182,7 @@ def verify_installer_integrity(game, installer_inventory, progress_callback=None
 
 def verify_disk_space(game, installer):
     err_msg = ""
-    if game.platform == "linux":
+    if game.platform == Platform.LINUX:
         required_space = get_game_size_from_unzip(installer)
         if not check_diskspace(required_space, game.install_dir):
             err_msg = _("Not enough space to extract game. Required: {} Available: {}")\
@@ -202,7 +203,7 @@ def make_tmp_dir(game):
 
 def extract_installer(game: Game, installer: str, temp_dir: str, language: str):
     # Extract the installer
-    if game.platform in ["linux"]:
+    if game.platform in [Platform.LINUX]:
         return extract_linux(installer, temp_dir)
     else:
         return extract_windows(game, installer, language)
@@ -301,7 +302,7 @@ def try_wine_command(command_arr):
 def move_and_overwrite(game, temp_dir, installed_to_tmp):
     # Copy the game files into the correct directory
     error_message = ""
-    source_dir = (os.path.join(temp_dir, "data", "noarch") if game.platform == 'linux' else
+    source_dir = (os.path.join(temp_dir, "data", "noarch") if game.platform == Platform.LINUX else
                   temp_dir)
     target_dir = game.install_dir
 
@@ -312,7 +313,7 @@ def move_and_overwrite(game, temp_dir, installed_to_tmp):
 
     # Remove the temporary directory
     shutil.rmtree(temp_dir, ignore_errors=True)
-    if game.platform in ["windows"] and "unins000.exe" not in os.listdir(game.install_dir):
+    if game.platform in [Platform.WINDOWS] and "unins000.exe" not in os.listdir(game.install_dir):
         open(os.path.join(game.install_dir, "unins000.exe"), "w").close()
     return error_message
 

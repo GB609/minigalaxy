@@ -4,6 +4,7 @@ import os
 import re
 
 from enum import Enum
+from minigalaxy import Platform
 from minigalaxy.paths import CONFIG_GAMES_DIR, ICON_DIR, THUMBNAIL_DIR
 from time import monotonic
 
@@ -26,7 +27,7 @@ class InfoKey(str, Enum):
 class Game:
 
     def __init__(self, name: str, url: str = "", md5sum=None, game_id: int = 0, install_dir: str = "",
-                 image_url="", platform="linux", dlcs=None, category=""):
+                 image_url="", platform=Platform.LINUX, dlcs=None, category=""):
         self.name = name
         self.url = url
         self.md5sum = {} if md5sum is None else md5sum

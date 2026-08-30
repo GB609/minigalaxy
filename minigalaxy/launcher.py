@@ -8,10 +8,11 @@ import shlex
 import threading
 from typing import List
 
+from minigalaxy import Platform
+from minigalaxy.constants import BINARY_NAMES_TO_IGNORE
 from minigalaxy.game import InfoKey
 from minigalaxy.launch_command import LaunchCommand
 from minigalaxy.translation import _
-from minigalaxy.constants import BINARY_NAMES_TO_IGNORE
 
 
 def get_wine_path(game):
@@ -72,7 +73,7 @@ def get_execute_commands(game) -> list[LaunchCommand]:
     launcher_type = determine_launcher_type(files)
     if launcher_type in ["start_script", "wine"]:
         launch_commands = get_start_script_launch_commands(game)
-    elif launcher_type == "windows":
+    elif launcher_type == Platform.WINDOWS:
         launch_commands = get_windows_launch_commands(game, files)
     elif launcher_type == "dosbox":
         launch_commands = get_dosbox_launch_commands(game, files)
@@ -99,7 +100,7 @@ def get_execute_commands(game) -> list[LaunchCommand]:
 def determine_launcher_type(files):
     launcher_type = "unknown"
     if "unins000.exe" in files:
-        launcher_type = "windows"
+        launcher_type = Platform.WINDOWS
     elif "dosbox" in files and shutil.which("dosbox"):
         launcher_type = "dosbox"
     elif "scummvm" in files and shutil.which("scummvm"):

@@ -1,4 +1,5 @@
 from gi.repository import Gdk
+from minigalaxy import Platform
 from minigalaxy.entity.state import State
 from minigalaxy.game import Game
 from minigalaxy.resources import platform_name_to_icon_file
@@ -21,8 +22,8 @@ class GameIconBar(Gtk.Box):
         self.game = game
         self.clickable = False
 
-        self.__load_scaled_icon(self.lnx_icon, "linux")
-        self.__load_scaled_icon(self.wine_icon, "windows")
+        self.__load_scaled_icon(self.lnx_icon, Platform.LINUX)
+        self.__load_scaled_icon(self.wine_icon, Platform.WINDOWS)
 
     @Gtk.Template.Callback()
     def toggle_image_highlight(self, icon: Gtk.Image, event):

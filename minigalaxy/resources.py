@@ -1,5 +1,6 @@
 from importlib.resources import files
 from importlib.resources.abc import Traversable
+from minigalaxy import Platform
 
 
 def get_data_file(file_name: str) -> Traversable:
@@ -17,7 +18,7 @@ def get_ui_data_file(file_name: str) -> Traversable:
 
 
 def platform_name_to_icon_file(name: str):
-    if name == "windows":
+    if name == Platform.WINDOWS:
         return "icon_wine.png"
 
     return "icon_linux.png"

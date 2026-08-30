@@ -3,6 +3,7 @@ import os
 import locale
 import shutil
 
+from minigalaxy import Platform
 from minigalaxy.config import Config
 from minigalaxy.constants import PLATFORM_MODE, SUPPORTED_DOWNLOAD_LANGUAGES, SUPPORTED_LOCALES, VIEWS
 from minigalaxy.download_manager import DownloadManager
@@ -96,7 +97,7 @@ class Preferences(Gtk.Dialog):
             return
         self.config.platform_mode = new_mode
         self.parent.reset_library()
-        if "windows" in new_mode and not shutil.which("wine"):
+        if Platform.WINDOWS in new_mode and not shutil.which("wine"):
             self.parent.show_error(_("Wine wasn't found. Windows games will be shown but not be installable."))
 
     def __save_install_dir_choice(self) -> bool:

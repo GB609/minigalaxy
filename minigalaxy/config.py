@@ -2,6 +2,7 @@ import logging
 import os
 import json
 
+from minigalaxy import Platform
 from minigalaxy.paths import CONFIG_FILE_PATH, DEFAULT_INSTALL_DIR
 
 # Moved from constants.py to here because of circular import between translations, config and constants
@@ -41,7 +42,7 @@ class Config:
         if "show_windows_games" in self.__config and "platform_mode" not in self.__config:
             value = self.__config["show_windows_games"]
             del self.__config["show_windows_games"]
-            new_mode = "linux,windows" if value else "linux"
+            new_mode = "linux,windows" if value else Platform.LINUX
             logging.info("Migrating 'show_windows_games=%s' to 'platform_mode=%s", value, new_mode)
             self.platform_mode = new_mode
 
@@ -206,7 +207,7 @@ class Config:
 
     def _raw_platform_mode(self):
         """To be used by preferences dialog only. Returns plain config string. Used to check for changes."""
-        return self.__config.get("platform_mode", "linux")
+        return self.__config.get("platform_mode", Platform.LINUX)
 
     @property
     def keep_window_maximized(self) -> bool:
