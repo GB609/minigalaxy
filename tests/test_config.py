@@ -16,6 +16,10 @@ class TestConfig(TestCase):
         self.config = Config("/no/writes/because/batch/mode")
         self.config.start_batch_edit()
 
+    def tearDown(self):
+        self.config.cancel_batch_edit()
+        super().tearDown()
+
     @patch('os.path.isfile')
     def test_read_config_file(self, mock_isfile: MagicMock):
         mock_isfile.return_value = True
