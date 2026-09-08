@@ -119,7 +119,8 @@ class Api:
                 logging.warning("%s (%s) has no store page url", product["title"], product['id'])
 
             game = Game(name=product["title"], url=product.get("url", None), game_id=product["id"],
-                        image_url=product["image"], platform=Platform.WINDOWS, category=product.get("category", None))
+                        image_url=product["image"], platform=Platform.WINDOWS, category=product.get("category", None),
+                        slug=product.get("slug", ""))
             game_list.append(game)
 
     def __filter_games_with_valid_platforms(self, games):

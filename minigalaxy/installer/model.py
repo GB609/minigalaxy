@@ -1,5 +1,49 @@
 from enum import Enum, auto
 
+from minigalaxy import Platform
+from minigalaxy.download import DownloadType
+from minigalaxy.game import Game
+
+
+class InstallableItem:
+    """Helper class used to generalize handling of Game and DLC downloads."""
+
+    def __init__(self, item_id, name, base_slug, slug, platform: Platform, item_type: DownloadType,
+                 base_dir, sub_path="", install_target=""):
+        self.id = item_id
+        self.name = name
+        self.platform = platform
+        self.base_slug = base_slug                # like slug, but always refers to the one from Game (relevant for DLC)
+        self.slug = slug                          # GOG-specific 'nickname', mostly a sanizited lower-case form of title
+        self.installer_base_dir = base_dir        # name of the directory containing the installers  no path
+        self.installer_sub_path = sub_path        # sub-path adjustment where DLC installers are saved
+        self.item_type = item_type                # GAME or GAME_DLC
+        self.install_target_dir = install_target  # The real, absolute directory where to install
+
+    @staticmethod
+    def for_gog_item(api, game: Game, dlc_id=None):
+        if dlc_id:
+            product_info = api.get_dlc_info(game, dlc_id)
+            sub_path = Game.strip_string(product_info["title"], to_path=True)
+            item_type = DownloadType.GAME_DLC
+        else:
+            product_info = api.get_info(game)
+            sub_path = ""
+            item_type = DownloadType.GAME
+
+        name = product_info["title"]
+        slug = product_info.get("slug", Game.strip_string(name, to_path=True))
+        return InstallableItem(
+            item_id=product_info["id"],
+            name=name,
+            base_slug=game.slug,
+            slug=slug,
+            platform=game.platform,
+            item_type=item_type,
+            base_dir=game.get_install_directory_name(),
+            sub_path=sub_path
+        )
+
 
 class InstallResultType(Enum):
     """checksum verification has started"""

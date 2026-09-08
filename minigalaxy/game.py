@@ -27,7 +27,7 @@ class InfoKey(str, Enum):
 class Game:
 
     def __init__(self, name: str, url: str = "", md5sum=None, game_id: int = 0, install_dir: str = "",
-                 image_url="", platform=Platform.LINUX, dlcs=None, category=""):
+                 image_url="", platform=Platform.LINUX, dlcs=None, category="", slug=""):
         self.name = name
         self.url = url
         self.md5sum = {} if md5sum is None else md5sum
@@ -40,6 +40,7 @@ class Game:
         self.status_file_path = self.get_status_file_path()
         self.product_info = None
         self.library_tile = None
+        self.slug = slug if slug else self.get_stripped_name(to_path=True)
 
     def get_stripped_name(self, to_path=False):
         return Game.strip_string(self.name, to_path=to_path)
@@ -224,6 +225,7 @@ class Game:
         self.image_url = other_game.image_url
         self.url = other_game.url
         self.category = other_game.category
+        self.slug = other_game.slug
 
     @property
     def product_info(self) -> dict:

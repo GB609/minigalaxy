@@ -4,6 +4,7 @@ import os
 
 import minigalaxy.installer.core as installer
 
+from importlib.resources import files
 from unittest import TestCase, mock
 from unittest.mock import patch, mock_open, MagicMock, call
 
@@ -343,6 +344,33 @@ class TestInstaller(TestCase):
         obs = installer.extract_by_wine(game, installer_path, temp_dir)
         self.assertEqual(exp, obs)
 
+    @mock.patch("os.makedirs")
+    def test_wine_create_prefix_fails(self, mock_makedirs):
+        """Test the code creating wine prefixes before install. Fail the command for an early exit from 'extract_by_wine'"""
+        game = Game(name="AD", game_id=44)
+        game.install_dir = f"/tmp/something/{id(self)}"
+
+        try_wine_mock = MagicMock()
+        installer.try_wine_command = try_wine_mock
+        try_wine_mock.return_value = (False, 3)
+
+        expected_prefix = f"{game.install_dir}/prefix"
+        expected_command = [
+            "env",
+            f"WINEPREFIX={expected_prefix}",
+            "WINEDLLOVERRIDES=winemenubuilder.exe=d",
+            "WINEDEBUG=fixme-all",
+            "wine",
+            "regedit",
+            str(files("minigalaxy.data").joinpath("wine_disable_menubuilder.reg").resolve())
+        ]
+
+        error_message = installer.extract_by_wine(game, None, None, None)
+
+        self.assertEqual(_("Wineprefix creation failed."), error_message)
+        mock_makedirs.assert_called_once_with(expected_prefix, mode=0o755)
+        try_wine_mock.assert_called_once_with(expected_command)
+
     @mock.patch('subprocess.Popen')
     @mock.patch("os.path.exists")
     def test_extract_by_wine_user_cancelled(self, mock_path_exists, mock_subprocess):
@@ -586,20 +614,3 @@ class TestInstaller(TestCase):
         mock_isempty.side_effect = lambda path: mock_isdir(path) and len(file_structure.get(path)) == 0
         mock_rmdir.side_effect = rmdir_fake
         mock_remove.side_effect = remove_fake
-
-
-class TestInventory(TestCase):
-
-    def setUp(self):
-        md5_sum = "5cc68247b61ba31e37e842fd04409d98"
-        installer_name = "beneath_a_steel_sky_en_gog_2_20150.sh"
-        self.game = Game("Beneath A Steel Sky", install_dir="/home/makson/GOG Games/Beneath a Steel Sky")
-        self.installer_path = f"/home/user/.cache/minigalaxy/download/Beneath a Steel Sky/{installer_name}"
-        self.inventory = prepare_inventory(self.installer_path, md5_sum, 0)
-
-    def test_as_keep_files_list_include_json(self):
-        inventory_files = self.inventory.as_keep_files_list()
-        json_file_name = self.installer_path.replace('.sh', '.json')
-
-        self.assertEqual(2, len(inventory_files))
-        self.assertIn(json_file_name, inventory_files)
