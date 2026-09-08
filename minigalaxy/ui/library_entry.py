@@ -11,7 +11,7 @@ from minigalaxy.download import CombinedProgressWatcher, Download, DownloadType
 from minigalaxy.download_manager import DownloadState
 from minigalaxy.entity.state import State
 from minigalaxy.game import Game, InfoKey
-from minigalaxy.installer import uninstall_game, enqueue_game_install, check_diskspace, \
+from ..installer import uninstall_game, enqueue_game_install, check_diskspace, \
     InstallerInventory, InstallResult, InstallResultType
 from minigalaxy.launcher import start_game, get_execute_commands
 from minigalaxy.paths import CACHE_DIR, DOWNLOAD_DIR, THUMBNAIL_DIR

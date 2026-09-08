@@ -98,7 +98,7 @@ def main():
 
     # Import the gi module after parsing arguments
     import signal
-    from minigalaxy import installer
+    from minigalaxy.installer.core import INSTALL_QUEUE
     from minigalaxy.ui.gtk import Gtk
     from minigalaxy.ui import Window
     from minigalaxy.config import Config
@@ -128,8 +128,8 @@ def main():
         # empty installation queue, but don't stop the currently running installation (if any)
         # so the forked process will resume until the installation is done, then the threads die in an orderly fashion
         # because the queue is empty
-        if installer.INSTALL_QUEUE:
-            active_item = installer.INSTALL_QUEUE.shutdown()
+        if INSTALL_QUEUE:
+            active_item = INSTALL_QUEUE.shutdown()
             show_installer_notification(active_item)
 
         # gtk quit
