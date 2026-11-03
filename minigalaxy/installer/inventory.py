@@ -3,6 +3,8 @@ import os
 
 from enum import StrEnum
 
+from .model import InstallableItem
+
 from minigalaxy import Platform
 from minigalaxy.file_info import FileInfo
 from minigalaxy.file_utils import safe_delete
@@ -18,7 +20,8 @@ class InstallerInventory:
         PLATFORM = "platform"
         EXECUTABLE = "exe"
 
-    def __init__(self, installer_path: str = ""):
+    def __init__(self, installer_path: str = "", item: InstallableItem = None):
+        self.item = item
         self.inventory_file = None
         self.data = {}
         self.meta = {}
@@ -77,6 +80,9 @@ class InstallerInventory:
 
     @property
     def item_id(self) -> int:
+        if InstallerInventory.MetaKey.ID not in self.meta and self.item:
+            return self.meta.setdefault(InstallerInventory.MetaKey.ID, self.item.id)
+
         return self.meta.get(InstallerInventory.MetaKey.ID, 0)
 
     @item_id.setter
@@ -254,6 +260,9 @@ class InstallerInventory:
             return Platform.LINUX
         if list(filter(lambda n: n.endswith(".exe") or n.endswith(".bin"), files)):
             return Platform.WINDOWS
+        # fallback for empty inventories if they at least were given an InstallableItem
+        if self.item:
+            return self.item.platform
 
         return None
 

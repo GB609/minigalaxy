@@ -1,11 +1,11 @@
 import http
 import logging
 import time
-from urllib.parse import urlencode
 import requests
 import xml.etree.ElementTree as ET
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlencode
 from requests import Session
 
 from minigalaxy.file_info import FileInfo

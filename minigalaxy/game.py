@@ -38,9 +38,12 @@ class Game:
         self.dlcs = [] if dlcs is None else dlcs
         self.category = category
         self.status_file_path = self.get_status_file_path()
-        self.product_info = None
+        self.product_info = None  # used for short-lived api cache
         self.library_tile = None
-        self.slug = slug if slug else self.get_stripped_name(to_path=True)
+        if slug:
+            self.slug = slug
+        else:
+            self.slug = Game.slug_from_name(self.name)
 
     def get_stripped_name(self, to_path=False):
         return Game.strip_string(self.name, to_path=to_path)
@@ -106,6 +109,10 @@ class Game:
     def strip_string(string, to_path=False):
         cleaned_string = re.sub('[^A-Za-z0-9]+', '', string) if not to_path else re.sub('[^A-Za-z0-9 ]+', '', string)
         return cleaned_string.strip()  # make sure the directory does not start or end with any whitespace
+
+    @staticmethod
+    def slug_from_name(name):
+        return Game.strip_string(name, to_path=True).replace(" ", "-").lower()
 
     def is_installed(self, dlc_title="") -> bool:
         installed = False

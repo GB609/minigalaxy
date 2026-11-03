@@ -52,8 +52,8 @@ class TestInstallableItem(TestCase):
 
         self.assertEqual(333, result.id)
         self.assertEqual("!Absolute Test&", result.name)
-        self.assertEqual("Absolute Test", result.base_slug)
-        self.assertEqual("Absolute Test", result.slug)
+        self.assertEqual("absolute-test", result.base_slug)
+        self.assertEqual("absolute-test", result.slug)
         self.assertEqual(Platform.LINUX, result.platform)
         self.assertEqual(DownloadType.GAME, result.item_type)
 
@@ -69,7 +69,7 @@ class TestInstallableItem(TestCase):
         self.assertEqual(383, result.id)
         self.assertEqual("Absolute?: Test-DLC", result.name)
         self.assertEqual("super-test-slug", result.base_slug)
-        self.assertEqual("Absolute TestDLC", result.slug)
+        self.assertEqual("absolute-testdlc", result.slug)
         self.assertEqual(Platform.LINUX, result.platform)
         self.assertEqual(DownloadType.GAME_DLC, result.item_type)
 

@@ -23,6 +23,16 @@ from minigalaxy.ui.properties import Properties
 from minigalaxy.ui.game_icon_bar import GameIconBar
 
 from types import FunctionType
+from typing import Callable
+
+
+# Set up several type aliases
+# CallbackFuncWrapper.finish_func
+GameDownloadCompleteCallback = Callable[[InstallerInventory], None]
+# CallbackFuncWrapper.cancel_func
+DownloadsCancelledCallback = Callable[[list[str]], None]
+# for 'on_success' and 'on_failure' in LibraryEntry.__install_step_callback
+InstallEndedCallback = Callable[[], None]
 
 
 class LibraryEntry:
@@ -226,7 +236,7 @@ class LibraryEntry:
     def is_executable(file):
         return os.path.isfile(file) and (os.access(file, os.X_OK) or os.path.splitext(file)[-1] in [".exe", ".sh"])
 
-    def get_download_info(self, platform=Platform.LINUX):
+    def get_download_info(self, platform=Platform.LINUX) -> tuple[bool, dict]:
         try:
             download_info = self.api.get_download_info(self.game, platform)
             result = True
@@ -276,7 +286,8 @@ class LibraryEntry:
         self.download_manager.download_now(download)
         return local_name
 
-    def _download(self, gog_item: InstallableItem, download_info, download_type, finish_func, download_icon=None):
+    def _download(self, gog_item: InstallableItem, download_info: dict,
+                  download_type: DownloadType, finish_func: GameDownloadCompleteCallback, download_icon=""):
         # several dlc could be downloading in parallel, remember state before they started
         # only overwrite if not set already
         if not self.download_list and not self.predownload_state:
@@ -295,10 +306,10 @@ class LibraryEntry:
         # Start the download for all files
         download_files = []
 
-        download_inventory = InstallerInventory()
+        download_inventory = InstallerInventory(item=gog_item)
         # make sure to init the new meta data
         download_inventory.item_id = gog_item.id
-        download_inventory.target_platform = gog_item.platform
+        download_inventory.target_platform = download_info.get('os', gog_item.platform)
         callback_factory = CallbackFuncWrapper(gog_item,
                                                finish_func,
                                                self.__cancel,
@@ -394,7 +405,8 @@ class LibraryEntry:
 
         self._install(inventory=inventory, on_success=on_success, update=True)
 
-    def __install_step_callback(self, result: InstallResult, on_success=None, on_failure=None, dlc_title=""):
+    def __install_step_callback(self, result: InstallResult, dlc_title="",
+                                on_success: InstallEndedCallback = None, on_failure: InstallEndedCallback = None):
         """
         Generic callback passed to enqueue_game_install.
         Handles some common work to do on success or failure, like:
@@ -481,11 +493,11 @@ class LibraryEntry:
         processing_state = State.UPDATING if update else State.INSTALLING
         self.update_to_state_if_idle(processing_state)
 
-        def install_finished(result):
+        def handle_install_progress(result):
             self.__install_step_callback(result, on_success, on_failure, dlc_title)
 
         enqueue_game_install(
-            result_callback=install_finished,
+            progress_callback=handle_install_progress,
             game=self.game,
             installer_inventory=inventory,
             config=self.config
@@ -800,7 +812,9 @@ class LibraryEntry:
 
 class CallbackFuncWrapper:
 
-    def __init__(self, item, finish_func, cancel_func, lib_entry, download_files, installer_inventory=None):
+    def __init__(self, item: InstallableItem,
+                 finish_func: GameDownloadCompleteCallback, cancel_func: DownloadsCancelledCallback,
+                 lib_entry: LibraryEntry, download_files: list[str], installer_inventory: InstallerInventory = None):
         self.lib_entry = lib_entry
         self.item = item
         # empty or incomplete at construction time, must be evaluated when finish_func is called

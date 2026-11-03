@@ -8,8 +8,9 @@ from minigalaxy.game import Game
 class InstallableItem:
     """Helper class used to generalize handling of Game and DLC downloads."""
 
-    def __init__(self, item_id, name, base_slug, slug, platform: Platform, item_type: DownloadType,
-                 base_dir, sub_path="", install_target=""):
+    def __init__(self, item_id: int, name: str, base_slug: str, slug: str,
+                 platform: Platform, item_type: DownloadType,
+                 base_dir: str, sub_path="", install_target=""):
         self.id = item_id
         self.name = name
         self.platform = platform
@@ -21,7 +22,7 @@ class InstallableItem:
         self.install_target_dir = install_target  # The real, absolute directory where to install
 
     @staticmethod
-    def for_gog_item(api, game: Game, dlc_id=None):
+    def for_gog_item(api, game: Game, dlc_id=""):
         if dlc_id:
             product_info = api.get_dlc_info(game, dlc_id)
             sub_path = Game.strip_string(product_info["title"], to_path=True)
@@ -32,7 +33,7 @@ class InstallableItem:
             item_type = DownloadType.GAME
 
         name = product_info["title"]
-        slug = product_info.get("slug", Game.strip_string(name, to_path=True))
+        slug = product_info.get("slug", Game.slug_from_name(name))
         return InstallableItem(
             item_id=product_info["id"],
             name=name,
@@ -65,8 +66,8 @@ class InstallResultType(Enum):
 class InstallResult:
 
     def __init__(self, install_id: int, result_type: InstallResultType, reason: str, details=None):
-        """Data class that will be passed to result_callback of InstallTask
-        reason is a type-dependent string:
+        """Data class that will be passed to result_callback of InstallTask.
+        The value/content of 'reason' depends on the current 'result_type':
         - INSTALL_START: game name
         - VERIFY_START: game name
         - VERIFY_PROGRESS: verified file

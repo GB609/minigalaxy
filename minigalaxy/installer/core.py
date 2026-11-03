@@ -54,14 +54,12 @@ def check_diskspace(required_size: str | int, location: str) -> bool:
     return diskspace_available >= installed_game_size
 
 
-# result_callback should be 'result_callback: Callable[InstallResult]',
-# but that is not yet possible due to the file structure
-def enqueue_game_install(result_callback: InstallProgressCallback, *args, **kwargs) -> None:
+def enqueue_game_install(progress_callback: InstallProgressCallback, *args, **kwargs) -> None:
     global INSTALL_QUEUE
     if not INSTALL_QUEUE:
         INSTALL_QUEUE = InstallerQueue()
 
-    task = InstallTask(result_callback, *args, **kwargs)
+    task = InstallTask(progress_callback, *args, **kwargs)
     INSTALL_QUEUE.put(task)
 
 
