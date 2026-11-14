@@ -494,7 +494,7 @@ class LibraryEntry:
         self.update_to_state_if_idle(processing_state)
 
         def handle_install_progress(result):
-            self.__install_step_callback(result, on_success, on_failure, dlc_title)
+            self.__install_step_callback(result, dlc_title, on_success, on_failure)
 
         enqueue_game_install(
             progress_callback=handle_install_progress,

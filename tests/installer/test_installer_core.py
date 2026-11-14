@@ -365,7 +365,7 @@ class TestInstaller(TestCase):
             str(files("minigalaxy.data").joinpath("wine_disable_menubuilder.reg").resolve())
         ]
 
-        error_message = installer.extract_by_wine(game, None, None, None)
+        error_message = installer.extract_by_wine(game, None, None)
 
         self.assertEqual(_("Wineprefix creation failed."), error_message)
         mock_makedirs.assert_called_once_with(expected_prefix, mode=0o755)
